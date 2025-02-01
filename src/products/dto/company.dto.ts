@@ -1,6 +1,6 @@
 import { IsBoolean, IsInt, IsNumber, IsOptional, IsPositive, IsString, IsUUID, MaxLength } from "class-validator";
 
-export class ProductsCompanyDto {
+export class CompanyDto {
   
   @IsUUID()
   @IsOptional()

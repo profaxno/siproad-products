@@ -2,30 +2,30 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { ProductsCompanyController } from './products-company.controller';
-import { ProductsCompanyService } from './products-company.service';
-import { ProductsCompany } from './entities/products-company.entity';
+import { CompanyController } from './company.controller';
+import { CompanyService } from './company.service';
+import { Company } from './entities/company.entity';
 
-import { ProductsElementController } from './products-element.controller';
-import { ProductsElementService } from './products-element.service';
-import { ProductsElement } from './entities/products-element.entity';
+import { ElementController } from './element.controller';
+import { ElementService } from './element.service';
+import { Element } from './entities/element.entity';
 
-import { ProductsFormulaController } from './products-formula.controller';
-import { ProductsFormulaService } from './products-formula.service';
-import { ProductsFormula } from './entities/products-formula.entity';
-import { ProductsFormulaElement } from './entities/products-formula-element.entity';
+import { FormulaController } from './formula.controller';
+import { FormulaService } from './formula.service';
+import { Formula } from './entities/formula.entity';
+import { FormulaElement } from './entities/formula-element.entity';
 
-import { ProductsProductController } from './products-product.controller';
-import { ProductsProductService } from './products-product.service';
-import { ProductsProduct } from './entities/products-product.entity';
-import { ProductsProductFormula } from './entities/products-product-formula.entity';
+import { ProductController } from './product.controller';
+import { ProductService } from './product.service';
+import { Product } from './entities/product.entity';
+import { ProductFormula } from './entities/product-formula.entity';
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([ProductsCompany, ProductsElement, ProductsFormula, ProductsFormulaElement, ProductsProduct, ProductsProductFormula])
+    TypeOrmModule.forFeature([Company, Element, Formula, FormulaElement, Product, ProductFormula])
   ],
-  controllers: [ProductsCompanyController, ProductsElementController, ProductsFormulaController, ProductsProductController],
-  providers: [ProductsCompanyService, ProductsElementService, ProductsFormulaService, ProductsProductService],
+  controllers: [CompanyController, ElementController, FormulaController, ProductController],
+  providers: [CompanyService, ElementService, FormulaService, ProductService],
 })
-export class SiproadProductsModule {}
+export class ProductsModule {}

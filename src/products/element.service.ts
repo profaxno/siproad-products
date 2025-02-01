@@ -9,32 +9,32 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { SearchDto } from 'src/common/dto/search.dto';
 
-import { SiproadResponseDto } from './dto/products-response-dto';
-import { ProductsElementDto } from './dto/products-element.dto';
-import { ProductsElement } from './entities/products-element.entity';
-import { ProductsCompany } from './entities/products-company.entity';
-import { ProductsCompanyService } from './products-company.service';
+import { productsResponseDto } from './dto/products-response-dto';
+import { ElementDto } from './dto/element.dto';
+import { Element } from './entities/element.entity';
+import { Company } from './entities/company.entity';
+import { CompanyService } from './company.service';
 
 @Injectable()
-export class ProductsElementService {
+export class ElementService {
 
-  private readonly logger = new Logger(ProductsElementService.name);
+  private readonly logger = new Logger(ElementService.name);
 
   private dbDefaultLimit = 1000;
 
   constructor(
     private readonly ConfigService: ConfigService,
 
-    @InjectRepository(ProductsElement)
-    private readonly elementRepository: Repository<ProductsElement>,
+    @InjectRepository(Element)
+    private readonly elementRepository: Repository<Element>,
 
-    private readonly productsCompanyService: ProductsCompanyService
+    private readonly companyService: CompanyService
     
   ){
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
   
-  updateElement(dto: ProductsElementDto): Promise<SiproadResponseDto> {
+  updateElement(dto: ElementDto): Promise<productsResponseDto> {
     if(!dto.id)
       return this.createElement(dto); // * create
     
@@ -44,13 +44,13 @@ export class ProductsElementService {
     // * find company
     const searchDto: SearchDto = new SearchDto(dto.companyId);
     
-    return this.productsCompanyService.findCompaniesByParams({}, searchDto)
-    .then( (companyList: ProductsCompany[]) => {
+    return this.companyService.findCompaniesByParams({}, searchDto)
+    .then( (companyList: Company[]) => {
 
       if(companyList.length == 0){
         const msg = `company not found, id=${dto.id}`;
         this.logger.warn(`updateElement: not executed (${msg})`);
-        return new SiproadResponseDto(HttpStatus.NOT_FOUND, msg);    
+        return new productsResponseDto(HttpStatus.NOT_FOUND, msg);    
       }
 
       const company = companyList[0];
@@ -59,13 +59,13 @@ export class ProductsElementService {
       const searchDto: SearchDto = new SearchDto(dto.id);
         
       return this.findElementsByParams({}, searchDto)
-      .then( (entityList: ProductsElement[]) => {
+      .then( (entityList: Element[]) => {
 
         // * validate
         if(entityList.length == 0){
           const msg = `element not found, id=${dto.id}`;
           this.logger.warn(`updateElement: not executed (${msg})`);
-          return new SiproadResponseDto(HttpStatus.NOT_FOUND, msg);  
+          return new productsResponseDto(HttpStatus.NOT_FOUND, msg);  
         }
   
         let entity = entityList[0];
@@ -78,14 +78,14 @@ export class ProductsElementService {
         entity.unit = dto.unit;
         
         return this.saveElement(entity)
-        .then( (entity: ProductsElement) => {
+        .then( (entity: Element) => {
   
           // * map to dto
-          const siproadFormulaDto = new ProductsElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id);
+          const dto = new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id);
   
           const end = performance.now();
           this.logger.log(`updateElement: executed, runtime=${(end - start) / 1000} seconds`);
-          return new SiproadResponseDto(HttpStatus.OK, 'updated OK', siproadFormulaDto);
+          return new productsResponseDto(HttpStatus.OK, 'updated OK', [dto]);
         })
         
       })
@@ -94,20 +94,20 @@ export class ProductsElementService {
 
   }
 
-  createElement(dto: ProductsElementDto): Promise<SiproadResponseDto> {
+  createElement(dto: ElementDto): Promise<productsResponseDto> {
     this.logger.log(`createElement: init process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
     // * find company
     const searchDto: SearchDto = new SearchDto(dto.companyId);
     
-    return this.productsCompanyService.findCompaniesByParams({}, searchDto)
-    .then( (companyList: ProductsCompany[]) => {
+    return this.companyService.findCompaniesByParams({}, searchDto)
+    .then( (companyList: Company[]) => {
 
       if(companyList.length == 0){
         const msg = `company not found, id=${dto.id}`;
         this.logger.warn(`createElement: not executed (${msg})`);
-        return new SiproadResponseDto(HttpStatus.NOT_FOUND, msg);    
+        return new productsResponseDto(HttpStatus.NOT_FOUND, msg);    
       }
 
       const company = companyList[0];
@@ -116,17 +116,17 @@ export class ProductsElementService {
       const searchDto: SearchDto = new SearchDto(undefined, [dto.name]);
         
       return this.findElementsByParams({}, searchDto, company.id)
-      .then( (entityList: ProductsElement[]) => {
+      .then( (entityList: Element[]) => {
 
         // * validate
         if(entityList.length > 0){
           const msg = `element already exists, name=${dto.name}`;
           this.logger.warn(`createElement: not executed (${msg})`);
-          return new SiproadResponseDto(HttpStatus.BAD_REQUEST, msg);
+          return new productsResponseDto(HttpStatus.BAD_REQUEST, msg);
         }
   
         // * create
-        let entity = new ProductsElement();
+        let entity = new Element();
         entity.company = company;
         entity.name = dto.name.toUpperCase()
         entity.cost = dto.cost;
@@ -134,76 +134,70 @@ export class ProductsElementService {
         entity.unit = dto.unit;
   
         return this.saveElement(entity)
-        .then( (entity: ProductsElement) => {
-          const dto = new ProductsElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id)
+        .then( (entity: Element) => {
+          const dto = new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id)
           const end = performance.now();
           this.logger.log(`createElement: OK, runtime=${(end - start) / 1000} seconds`);
-          return new SiproadResponseDto(HttpStatus.CREATED, 'created OK', dto);
+          return new productsResponseDto(HttpStatus.CREATED, 'created OK', [dto]);
         })
   
       })
 
-
-    })
-
-
-  }
-
-  findElements(companyId: string, paginationDto: PaginationDto, searchDto: SearchDto): Promise<void | SiproadResponseDto> {
-    
-    // // * validate
-    // const isSearchByName: boolean = (searchDto.search && !isUUID(searchDto.search)) || (searchDto.searchList && searchDto.searchList.length > 0);
-
-    // if( isSearchByName && !companyId ){
-    //   const msg = `companyId is required`;
-    //   this.logger.warn(`findOneElementByValue: not executed (${msg})`);
-    //   return Promise.resolve(new SiproadResponseDto(HttpStatus.BAD_REQUEST, msg));
-    // }
-
-    return this.findElementsByParams(paginationDto, searchDto, companyId)
-    .then( (entityList: ProductsElement[]) => entityList.map( (entity: ProductsElement) => new ProductsElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id) ) )// * map entities to DTOs
-    .then( (dtoList: ProductsElementDto[]) => new SiproadResponseDto(HttpStatus.OK, 'OK', dtoList) )
-    .catch(error => {
-      this.logger.error(`findElements: error`, error)
     })
 
   }
 
-  findOneElementByValue(companyId: string, value: string): Promise<SiproadResponseDto> {
+  findElements(companyId: string, paginationDto: PaginationDto, searchDto: SearchDto): Promise<productsResponseDto> {
     const start = performance.now();
 
-    // // * validate
-    // const isSearchByName: boolean = !isUUID(value);
+    return this.findElementsByParams(paginationDto, searchDto, companyId)
+    .then( (entityList: Element[]) => entityList.map( (entity: Element) => new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id) ) )// * map entities to DTOs
+    .then( (dtoList: ElementDto[]) => {
+      
+      if(dtoList.length == 0){
+        const msg = `elements not found`;
+        this.logger.warn(`findElements: ${msg}`);
+        return new productsResponseDto(HttpStatus.NOT_FOUND, msg, []);
+      }
 
-    // if( isSearchByName && !companyId ){
-    //   const msg = `companyId is required`;
-    //   this.logger.warn(`findOneElementByValue: not executed (${msg})`);
-    //   return Promise.resolve(new SiproadResponseDto(HttpStatus.BAD_REQUEST, msg));
-    // }
+      const end = performance.now();
+      this.logger.log(`findElements: executed, runtime=${(end - start) / 1000} seconds`);
+      return new productsResponseDto(HttpStatus.OK, 'OK', dtoList);
+    })
+    .catch(error => {
+      this.logger.error(`findElements: error`, error);
+      throw error;
+    })
+
+  }
+
+  findOneElementByValue(companyId: string, value: string): Promise<productsResponseDto> {
+    const start = performance.now();
 
     const searchDto: SearchDto = new SearchDto(value);
     
-    // * find element
     return this.findElementsByParams({}, searchDto, companyId)
-    .then( (entityList: ProductsElement[]) => {
+    .then( (entityList: Element[]) => entityList.map( (entity: Element) => new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id) ) )// * map entities to DTOs
+    .then( (dtoList: ElementDto[]) => {
       
-      if(entityList.length == 0){
+      if(dtoList.length == 0){
         const msg = `element not found, value=${value}`;
         this.logger.warn(`findOneElementByValue: ${msg}`);
-        return new SiproadResponseDto(HttpStatus.NOT_FOUND, msg);
+        return new productsResponseDto(HttpStatus.NOT_FOUND, msg, []);
       }
 
-      const entity = entityList[0];
-
-      const dto = new ProductsElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id);
       const end = performance.now();
       this.logger.log(`findOneElementByValue: executed, runtime=${(end - start) / 1000} seconds`);
-      return new SiproadResponseDto(HttpStatus.OK, 'OK', dto);
+      return new productsResponseDto(HttpStatus.OK, 'OK', dtoList);
     })
-    
+    .catch(error => {
+      this.logger.error(`findOneElementByValue: error`, error);
+      throw error;
+    })
+
   }
 
-  removeElement(id: string): Promise<SiproadResponseDto> {
+  removeElement(id: string): Promise<productsResponseDto> {
     this.logger.log(`removeElement: init process... id=${id}`);
     const start = performance.now();
 
@@ -211,21 +205,21 @@ export class ProductsElementService {
     const searchDto: SearchDto = new SearchDto(id);
     
     return this.findElementsByParams({}, searchDto)
-    .then( (entityList: ProductsElement[]) => {
+    .then( (entityList: Element[]) => {
       
       if(entityList.length == 0){
         const msg = `element not found, id=${id}`;
-        return new SiproadResponseDto(HttpStatus.NOT_FOUND, msg);
+        return new productsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
       
       const entity = entityList[0];
 
       // * remove
       return this.elementRepository.remove(entity)
-      .then( (entity: ProductsElement) => {
+      .then( (entity: Element) => {
         const end = performance.now();
         this.logger.log(`removeElement: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
-        return new SiproadResponseDto(HttpStatus.OK, 'delete OK');
+        return new productsResponseDto(HttpStatus.OK, 'delete OK');
       })
 
     })
@@ -233,7 +227,7 @@ export class ProductsElementService {
 
       if(error.errno == 1217) {
         this.logger.warn('removeElement: not executed, error', error);
-        return new SiproadResponseDto(HttpStatus.BAD_REQUEST, 'element is being used');
+        return new productsResponseDto(HttpStatus.BAD_REQUEST, 'element is being used');
       }
 
       this.logger.error('removeElement: error', error);
@@ -242,7 +236,7 @@ export class ProductsElementService {
 
   }
 
-  private findElementsByParams(paginationDto: PaginationDto, searchDto: SearchDto, companyId?: string): Promise<ProductsElement[]> {
+  private findElementsByParams(paginationDto: PaginationDto, searchDto: SearchDto, companyId?: string): Promise<Element[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
     // * search by partial name
@@ -287,13 +281,13 @@ export class ProductsElementService {
     
   }
 
-  private saveElement(entity: ProductsElement): Promise<ProductsElement> {
+  private saveElement(entity: Element): Promise<Element> {
     const start = performance.now();
 
-    const newEntity: ProductsElement = this.elementRepository.create(entity);
+    const newEntity: Element = this.elementRepository.create(entity);
 
     return this.elementRepository.save(newEntity)
-    .then( (entity: ProductsElement) => {
+    .then( (entity: Element) => {
       const end = performance.now();
       this.logger.log(`saveElement: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
       return entity;

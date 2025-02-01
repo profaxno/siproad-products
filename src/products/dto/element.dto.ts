@@ -1,7 +1,7 @@
 import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsPositive, IsString, IsUUID, MaxLength } from "class-validator";
 import { MeasuresEnum } from "../enum/measures.enum";
 
-export class ProductsProductDto {
+export class ElementDto {
   
   @IsUUID()
   @IsOptional()
@@ -14,22 +14,22 @@ export class ProductsProductDto {
   @MaxLength(45)
   name: string;
 
-  @IsString()
-  @MaxLength(255)
-  description: string;
-
   @IsNumber()
   cost: number;
 
   @IsNumber()
-  price: number;
+  stock: number;
 
-  constructor(companyId: string, name: string, description: string, cost: number, price: number, id?: string) {
+  @IsIn([MeasuresEnum.UN, MeasuresEnum.KG])
+  @MaxLength(5)
+  unit: string;
+
+  constructor(companyId: string, name: string, cost: number, stock: number, unit: string, id?: string) {
     this.companyId = companyId;
     this.name = name;
-    this.description = description;
     this.cost = cost;
-    this.price = price;
+    this.stock = stock;
+    this.unit = unit;
     this.id = id;
   }
 }

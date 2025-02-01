@@ -1,9 +1,9 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { ProductsElement } from "./products-element.entity";
-import { ProductsFormula } from "./products-formula.entity";
+import { Element } from "./element.entity";
+import { Formula } from "./formula.entity";
 
 @Entity("pro_formula_element")
-export class ProductsFormulaElement {
+export class FormulaElement {
   
   @PrimaryGeneratedColumn()
   id: number;
@@ -12,15 +12,15 @@ export class ProductsFormulaElement {
   qty: number;
 
   @ManyToOne(
-    () => ProductsElement,
+    () => Element,
     (element) => element.formulaElement,
     {eager: true}
   )
-  element: ProductsElement;
+  element: Element;
 
   @ManyToOne(
-    () => ProductsFormula,
+    () => Formula,
     (formula) => formula.formulaElement,
   )
-  formula: ProductsFormula;
+  formula: Formula;
 }

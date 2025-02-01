@@ -1,10 +1,10 @@
 import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { ProductsCompany } from "./products-company.entity";
-import { ProductsFormulaElement } from "./products-formula-element.entity";
-import { ProductsProductFormula } from "./products-product-formula.entity";
+import { Company } from "./company.entity";
+import { FormulaElement } from "./formula-element.entity";
+import { ProductFormula } from "./product-formula.entity";
 
 @Entity("pro_formula")
-export class ProductsFormula {
+export class Formula {
   
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -26,22 +26,22 @@ export class ProductsFormula {
   status: boolean
 
   @ManyToOne(
-    () => ProductsCompany,
+    () => Company,
     (company) => company.formula,
     {eager: true}
   )
-  company: ProductsCompany;
+  company: Company;
 
   @OneToMany(
-    () => ProductsFormulaElement,
+    () => FormulaElement,
     (formulaElement) => formulaElement.formula,
     {eager: true}
   )
-  formulaElement: ProductsFormulaElement[];
+  formulaElement: FormulaElement[];
 
   @OneToMany(
-    () => ProductsProductFormula,
+    () => ProductFormula,
     (productFormula) => productFormula.product
   )
-  productFormula: ProductsProductFormula;
+  productFormula: ProductFormula;
 }

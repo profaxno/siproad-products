@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { SiproadProductsModule } from './products/products.module';
+import { ProductsModule } from './products/products.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 
@@ -22,7 +22,7 @@ import { CommonModule } from './common/common.module';
       synchronize: false,
       autoLoadEntities: true
     }),
-    SiproadProductsModule,
+    ProductsModule,
     CommonModule],
   controllers: [],
   providers: [],
