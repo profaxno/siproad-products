@@ -17,25 +17,7 @@ export class ProductController {
     private readonly productService: ProductService
   ) {}
 
-  // @Post('/products/create')
-  // @HttpCode(HttpStatus.OK)
-  // createProduct(@Body() dto: ProductDto): Promise<productsResponseDto> {
-  //   this.logger.log(`>>> createProduct: dto=${JSON.stringify(dto)}`);
-  //   const start = performance.now();
-
-  //   return this.productService.createProduct(dto)
-  //   .then( (response: productsResponseDto) => {
-  //     const end = performance.now();
-  //     this.logger.log(`<<< createProduct: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
-  //     return response;
-  //   })
-  //   .catch( (error: Error) => {
-  //     this.logger.error(error.stack);
-  //     return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
-  //   })
-  // }
-
-  @Patch('/products/update') // TODO: Posiblemente sea mas elegante que el companyId venga como un param en la url, una pregunta interesante si cambio el companyId haciend un update que pasa?
+  @Patch('/products/update')
   @HttpCode(HttpStatus.OK)
   updateProduct(@Body() dto: ProductDto): Promise<productsResponseDto> {
     this.logger.log(`>>> updateProduct: dto=${JSON.stringify(dto)}`);

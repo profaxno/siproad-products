@@ -14,11 +14,11 @@ import { ProductDto, ProductFormulaDto } from './dto/product.dto';
 import { Product } from './entities/product.entity';
 import { ProductFormula } from './entities/product-formula.entity';
 
-import { CompanyService } from './company.service';
-import { Company } from './entities/company.entity';
-
 import { FormulaService } from './formula.service';
 import { Formula } from './entities/formula.entity';
+
+import { CompanyService } from './company.service';
+import { Company } from './entities/company.entity';
 
 @Injectable()
 export class ProductService {
@@ -101,6 +101,10 @@ export class ProductService {
       })
 
     })
+    .catch(error => {
+      this.logger.error(`updateProduct: error`, error);
+      throw error;
+    })
 
   }
 
@@ -159,6 +163,10 @@ export class ProductService {
   
       })
 
+    })
+    .catch(error => {
+      this.logger.error(`createProduct: error`, error);
+      throw error;
     })
     
   }
@@ -228,15 +236,10 @@ export class ProductService {
         const msg = `product not found, id=${id}`;
         return new productsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
-
-      const entity = entityList[0];
       
-      // TODO: Posiblemente eliminar los product-formula se deba hacer via CASCADE true
-      // * remove
-      return this.productFormulaRepository.findBy( { product: entity } ) // * find productFormula
-      .then( (productFormulaList: ProductFormula[]) => this.productFormulaRepository.remove(productFormulaList)) // * remove productFormulas
-      .then( () => this.productRepository.remove(entity) ) // * remove product
-      .then( (entity: Product) => {
+      // * delete
+      return this.productRepository.delete(id) // * delete product and productFormula on cascade
+      .then( () => {
 
         const end = performance.now();
         this.logger.log(`removeProduct: OK, runtime=${(end - start) / 1000} seconds`);
@@ -310,21 +313,6 @@ export class ProductService {
     
   }
 
-  // private findOneProduct(value: string): Promise<Product> {
-
-  //   if(isUUID(value)){
-  //     return this.productRepository.findOneBy({ id: value }); // * find by id
-  //   }
-    
-  //   return this.productRepository.createQueryBuilder() // * find by name
-  //   .where('UPPER(name) = :name', {
-  //     name: value.toUpperCase()
-  //   })
-  //   //.leftJoinAndSelect('product.images', 'prodImages')
-  //   .getOne()
-    
-  // }
-
   private saveProduct(entity: Product): Promise<Product> {
     const start = performance.now();
 
@@ -386,7 +374,6 @@ export class ProductService {
 
       })
 
-
     })
 
   }
@@ -443,35 +430,5 @@ export class ProductService {
 
     return productDto;
   }
-  
-  // private generateProductWithFormulaList(product: Product, productFormulaList: ProductFormula[]): ProductDto {
-    
-  //   let productFormulaDtoList: ProductFormulaDto[] = [];
-  //   let cost: number = product.cost;
-
-  //   if(productFormulaList.length > 0){
-
-  //     productFormulaDtoList = productFormulaList.map( (productFormula: ProductFormula) => {
-        
-  //       let formulaElementDtoList: FormulaElementDto[] = [];
-        
-  //       // * map formula-element to DTO
-  //       const formulaElementList: FormulaElement[] = productFormula.formula.formulaElement;
-  //       if(formulaElementList?.length > 0){
-  //         formulaElementDtoList = formulaElementList.map( (formulaElement) => new FormulaElementDto(formulaElement.element.id, formulaElement.qty, formulaElement.element.name, formulaElement.element.cost, formulaElement.element.unit) )
-  //       }
-
-  //       return new ProductFormulaDto(productFormula.formula.id, productFormula.qty, productFormula.formula.name, productFormula.formula.cost, formulaElementDtoList) 
-  //     });
-      
-  //     // * calculate cost
-  //     cost = productFormulaList.reduce( (cost, productFormula) => cost + (productFormula.qty * productFormula.formula.cost), 0);
-  //   }
-
-  //   // * generate product dto
-  //   const productDto = new ProductDto(product.company.id, product.name, product.description, cost, product.price, productFormulaDtoList, product.id);
-
-  //   return productDto;
-  // }
 
 }

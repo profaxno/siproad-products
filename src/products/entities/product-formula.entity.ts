@@ -12,16 +12,15 @@ export class ProductFormula {
   qty: number;
   
   @ManyToOne(
-    () => Formula,
-    (formula) => formula.productFormula,
-    {eager: true}
-  )
-  formula: Formula;
-
-  @ManyToOne(
     () => Product,
     (product) => product.productFormula,
   )
   product: Product;
 
+  @ManyToOne(
+    () => Formula,
+    (formula) => formula.productFormula,
+    { eager: true }
+  )
+  formula: Formula;
 }

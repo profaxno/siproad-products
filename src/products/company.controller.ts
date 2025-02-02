@@ -16,24 +16,6 @@ export class CompanyController {
     private readonly companyService: CompanyService
   ) {}
 
-  // @Post('/companies/create')
-  // @HttpCode(HttpStatus.OK)
-  // createCompany(@Body() dto: CompanyDto): Promise<productsResponseDto> {
-  //   this.logger.log(`>>> createCompany: dto=${JSON.stringify(dto)}`);
-  //   const start = performance.now();
-
-  //   return this.companyService.createCompany(dto)
-  //   .then( (response: productsResponseDto) => {
-  //     const end = performance.now();
-  //     this.logger.log(`<<< createCompany: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
-  //     return response;
-  //   })
-  //   .catch( (error: Error) => {
-  //     this.logger.error(`createCompany: error=${error.stack}`);
-  //     return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
-  //   })
-  // }
-
   @Patch('/companies/update')
   @HttpCode(HttpStatus.OK)
   updateCompany(@Body() dto: CompanyDto): Promise<productsResponseDto> {
@@ -47,7 +29,7 @@ export class CompanyController {
       return response;
     })
     .catch( (error: Error) => {
-      this.logger.error(`updateCompany: error=${error.stack}`);
+      this.logger.error(error.stack);
       return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }
@@ -64,7 +46,7 @@ export class CompanyController {
       return response;
     })
     .catch( (error: Error) => {
-      this.logger.error(`findCompanies: error=${error.stack}`);
+      this.logger.error(error.stack);
       return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }
@@ -81,7 +63,7 @@ export class CompanyController {
       return response;
     })
     .catch( (error: Error) => {
-      this.logger.error(`findOneCompanyByValue: error=${error.stack}`);
+      this.logger.error(error.stack);
       return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
 
@@ -99,7 +81,7 @@ export class CompanyController {
       return response;
     })
     .catch( (error: Error) => {
-      this.logger.error(`removeCompany: error=${error.stack}`);
+      this.logger.error(error.stack);
       return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }

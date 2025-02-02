@@ -66,6 +66,10 @@ export class CompanyService {
       })
       
     })
+    .catch(error => {
+      this.logger.error(`updateCompany: error`, error);
+      throw error;
+    })
 
   }
 
@@ -98,6 +102,10 @@ export class CompanyService {
         return new productsResponseDto(HttpStatus.CREATED, 'created OK', [dto]);
       })
 
+    })
+    .catch(error => {
+      this.logger.error(`createCompany: error`, error);
+      throw error;
     })
 
   }
@@ -165,14 +173,12 @@ export class CompanyService {
         const msg = `company not found, id=${id}`;
         return new productsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
-      
-      const entity = entityList[0];
 
-      // * remove
-      return this.companyRepository.remove(entity)
-      .then( (entity: Company) => {
+      // * delete
+      return this.companyRepository.delete(id)
+      .then( () => {
         const end = performance.now();
-        this.logger.log(`removeCompany: OK, entity=${JSON.stringify(entity)}`);
+        this.logger.log(`removeCompany: OK, runtime=${(end - start) / 1000} seconds`);
         return new productsResponseDto(HttpStatus.OK, 'delete OK');
       })
 

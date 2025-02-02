@@ -36,14 +36,14 @@ export class Product {
   @ManyToOne(
     () => Company,
     (company) => company.product,
-    {eager: true}
+    { eager: true }
   )
   company: Company;
 
   @OneToMany(
     () => ProductFormula,
     (productFormula) => productFormula.product,
-    {eager: true}
+    { eager: true }
   )
   productFormula: ProductFormula[];
 }

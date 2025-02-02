@@ -11,11 +11,13 @@ import { SearchDto } from 'src/common/dto/search.dto';
 
 import { productsResponseDto } from './dto/products-response-dto';
 import { FormulaDto, FormulaElementDto } from './dto/formula.dto';
-import { Company } from './entities/company.entity';
-import { Element } from './entities/element.entity';
 import { Formula } from './entities/formula.entity';
 import { FormulaElement } from './entities/formula-element.entity';
+
+import { Element } from './entities/element.entity';
+
 import { CompanyService } from './company.service';
+import { Company } from './entities/company.entity';
 
 @Injectable()
 export class FormulaService {
@@ -95,6 +97,10 @@ export class FormulaService {
       })
 
     })
+    .catch(error => {
+      this.logger.error(`updateFormula: error`, error);
+      throw error;
+    })
 
   }
 
@@ -152,6 +158,10 @@ export class FormulaService {
       })
 
     })
+    .catch(error => {
+      this.logger.error(`createFormula: error`, error);
+      throw error;
+    })
     
   }
 
@@ -202,26 +212,6 @@ export class FormulaService {
       this.logger.error(`findOneFormulaByValue: error`, error);
       throw error;
     })
-
-    // const where = isUUID(value) ? { id: value, status: true } : { name: value.toUpperCase(), status: true };
-
-    // return this.formulaRepository.findOne({
-    //   relations: {
-    //     formulaElement: true
-    //   },
-    //   where: where,
-    // })
-    // .then( (entity: Formula) => {
-      
-    //   if(!entity){
-    //     const msg = `formula not found, value=${value}`;
-    //     return new productsResponseDto(HttpStatus.NOT_FOUND, msg);
-    //   }
-      
-    //   const siproadFormulaDto = this.generateFormulaWithFormulaElement(entity, entity.formulaElement);
-
-    //   return new productsResponseDto(HttpStatus.OK, 'OK', siproadFormulaDto);
-    // })
     
   }
 
@@ -241,14 +231,9 @@ export class FormulaService {
         return new productsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
 
-      const entity = entityList[0];
-      
-      // TODO: Posiblemente eliminar los formula-element se deba hacer via CASCADE true
-      // * remove
-      return this.formulaElementRepository.findBy( { formula: entity } ) // * find formulaElement
-      .then( (formulaElementList: FormulaElement[]) => this.formulaElementRepository.remove(formulaElementList)) // * remove formulaElements
-      .then( () => this.formulaRepository.remove(entity) ) // * remove formula
-      .then( (entity: Formula) => {
+      // * delete
+      return this.formulaRepository.delete(id) // * delete formula and formulaElement on cascade
+      .then( () => {
 
         const end = performance.now();
         this.logger.log(`removeFormula: OK, runtime=${(end - start) / 1000} seconds`);
@@ -268,6 +253,50 @@ export class FormulaService {
     })
 
   }
+  
+  // removeFormula(id: string): Promise<productsResponseDto> {
+  //   this.logger.log(`removeFormula: init process... id=${id}`);
+  //   const start = performance.now();
+
+  //   // * find formula
+  //   const searchDto: SearchDto = new SearchDto(id);
+    
+  //   return this.findFormulasByParams({}, searchDto)
+  //   .then( (entityList: Formula[]) => {
+  
+  //     // * validate
+  //     if(entityList.length == 0){
+  //       const msg = `formula not found, id=${id}`;
+  //       return new productsResponseDto(HttpStatus.NOT_FOUND, msg);
+  //     }
+
+  //     const entity = entityList[0];
+      
+  //     // TODO: Posiblemente eliminar los formula-element se deba hacer via CASCADE true
+  //     // * remove
+  //     return this.formulaElementRepository.findBy( { formula: entity } ) // * find formulaElement
+  //     .then( (formulaElementList: FormulaElement[]) => this.formulaElementRepository.remove(formulaElementList)) // * remove formulaElements
+  //     .then( () => this.formulaRepository.remove(entity) ) // * remove formula
+  //     .then( (entity: Formula) => {
+
+  //       const end = performance.now();
+  //       this.logger.log(`removeFormula: OK, runtime=${(end - start) / 1000} seconds`);
+  //       return new productsResponseDto(HttpStatus.OK, 'delete OK');
+
+  //     })
+
+  //   })
+  //   .catch(error => {
+  //     if(error.errno == 1217) {
+  //       this.logger.warn('removeFormula: not executed, error', error);
+  //       return new productsResponseDto(HttpStatus.BAD_REQUEST, 'formula is being used');
+  //     }
+
+  //     this.logger.error('removeFormula: error', error);
+  //     throw error;
+  //   })
+
+  // }
 
   private findFormulasByParams(paginationDto: PaginationDto, searchDto: SearchDto, companyId?: string): Promise<Formula[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
@@ -321,21 +350,6 @@ export class FormulaService {
     })
     
   }
-
-  // private findOneFormula(value: string): Promise<Formula> {
-
-  //   if(isUUID(value)){
-  //     return this.formulaRepository.findOneBy({ id: value }); // * find by id
-  //   }
-    
-  //   return this.formulaRepository.createQueryBuilder() // * find by name
-  //   .where('UPPER(name) = :name', {
-  //     name: value.toUpperCase()
-  //   })
-  //   //.leftJoinAndSelect('product.images', 'prodImages')
-  //   .getOne()
-    
-  // }
 
   private saveFormula(entity: Formula): Promise<Formula> {
     const start = performance.now();
@@ -397,7 +411,6 @@ export class FormulaService {
         })
 
       })
-
 
     })
 

@@ -12,6 +12,7 @@ import { SearchDto } from 'src/common/dto/search.dto';
 import { productsResponseDto } from './dto/products-response-dto';
 import { ElementDto } from './dto/element.dto';
 import { Element } from './entities/element.entity';
+
 import { Company } from './entities/company.entity';
 import { CompanyService } from './company.service';
 
@@ -91,6 +92,10 @@ export class ElementService {
       })
 
     })
+    .catch(error => {
+      this.logger.error(`updateElement: error`, error);
+      throw error;
+    })
 
   }
 
@@ -143,6 +148,10 @@ export class ElementService {
   
       })
 
+    })
+    .catch(error => {
+      this.logger.error(`createElement: error`, error);
+      throw error;
     })
 
   }
@@ -211,14 +220,12 @@ export class ElementService {
         const msg = `element not found, id=${id}`;
         return new productsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
-      
-      const entity = entityList[0];
 
-      // * remove
-      return this.elementRepository.remove(entity)
-      .then( (entity: Element) => {
+      // * delete
+      return this.elementRepository.delete(id)
+      .then( () => {
         const end = performance.now();
-        this.logger.log(`removeElement: OK, runtime=${(end - start) / 1000} seconds, entity=${JSON.stringify(entity)}`);
+        this.logger.log(`removeElement: OK, runtime=${(end - start) / 1000} seconds`);
         return new productsResponseDto(HttpStatus.OK, 'delete OK');
       })
 

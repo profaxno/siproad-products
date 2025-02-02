@@ -17,25 +17,7 @@ export class ElementController {
     private readonly elementService: ElementService
   ) {}
 
-  // @Post('/elements/create')
-  // @HttpCode(HttpStatus.OK)
-  // createElement(@Body() dto: ElementDto): Promise<productsResponseDto> {
-  //   this.logger.log(`>>> createElement: dto=${JSON.stringify(dto)}`);
-  //   const start = performance.now();
-
-  //   return this.elementService.createElement(dto)
-  //   .then( (response: productsResponseDto) => {
-  //     const end = performance.now();
-  //     this.logger.log(`<<< createElement: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
-  //     return response;
-  //   })
-  //   .catch( (error: Error) => {
-  //     this.logger.error(error.stack);
-  //     return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
-  //   })
-  // }
-
-  @Patch('/elements/update') // TODO: Posiblemente sea mas elegante que el companyId venga como un param en la url, una pregunta interesante si cambio el companyId haciend un update que pasa?
+  @Patch('/elements/update')
   @HttpCode(HttpStatus.OK)
   updateElement(@Body() dto: ElementDto): Promise<productsResponseDto> {
     this.logger.log(`>>> updateElement: dto=${JSON.stringify(dto)}`);

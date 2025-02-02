@@ -36,7 +36,7 @@ export class Element {
   @ManyToOne(
     () => Company,
     (company) => company.element,
-    {eager: true}
+    { eager: true }
   )
   company: Company;
 

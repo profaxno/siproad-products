@@ -16,24 +16,6 @@ export class FormulaController {
     private readonly formulaService: FormulaService
   ) {}
 
-  // @Post('/formulas/create')
-  // @HttpCode(HttpStatus.OK)
-  // createFormula(@Body() dto: FormulaDto): Promise<productsResponseDto> {
-  //   this.logger.log(`>>> createFormula: dto=${JSON.stringify(dto)}`);
-  //   const start = performance.now();
-
-  //   return this.formulaService.createFormula(dto)
-  //   .then( (response: productsResponseDto) => {
-  //     const end = performance.now();
-  //     this.logger.log(`<<< createFormula: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
-  //     return response;
-  //   })
-  //   .catch( (error: Error) => {
-  //     this.logger.error(`createFormula: error=${error.stack}`);
-  //     return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
-  //   })
-  // }
-
   @Patch('/formulas/update')
   @HttpCode(HttpStatus.OK)
   updateFormula(@Body() dto: FormulaDto): Promise<productsResponseDto> {
@@ -47,7 +29,7 @@ export class FormulaController {
       return response;
     })
     .catch( (error: Error) => {
-      this.logger.error(`updateFormula: error=${error.stack}`);
+      this.logger.error(error.stack);
       return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }
@@ -64,24 +46,24 @@ export class FormulaController {
       return response;
     })
     .catch( (error: Error) => {
-      this.logger.error(`findFormulas: error=${error.stack}`);
+      this.logger.error(error.stack);
       return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }
 
   @Get('/formulas/:companyId/:value')
   findOneFormulaByValue(@Param('companyId', ParseUUIDPipe) companyId: string, @Param('value') value: string): Promise<productsResponseDto> {
-    this.logger.log(`>>> findOneFormulaWithElementsByValue: companyId=${companyId}, value=${value}`);
+    this.logger.log(`>>> findOneFormulaByValue: companyId=${companyId}, value=${value}`);
     const start = performance.now();
 
     return this.formulaService.findOneFormulaByValue(companyId, value)
     .then( (response: productsResponseDto) => {
       const end = performance.now();
-      this.logger.log(`<<< findOneFormulaWithElementsByValue: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      this.logger.log(`<<< findOneFormulaByValue: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
-      this.logger.error(`findOneFormulaWithElementsByValue: error=${error.stack}`);
+      this.logger.error(error.stack);
       return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
 
@@ -99,7 +81,7 @@ export class FormulaController {
       return response;
     })
     .catch( (error: Error) => {
-      this.logger.error(`removeFormula: error=${error.stack}`);
+      this.logger.error(error.stack);
       return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }

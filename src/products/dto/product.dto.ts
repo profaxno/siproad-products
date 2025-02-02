@@ -41,7 +41,6 @@ export class ProductDto {
     this.id = id;
     this.formulaList = formulaList;
   }
-
 }
 
 export class ProductFormulaDto {
@@ -65,8 +64,6 @@ export class ProductFormulaDto {
   @Type(() => FormulaElementDto)
   elementList?: FormulaElementDto[];
   
-    // TODO: agregar aqui la lista de formula-element asociada a la formula, donde la cantidad de cada ingrediente debe multiplicarse por el qty del product-formula
-
   constructor(id: string, qty: number, name?: string, cost?: number, elementList?: FormulaElementDto[]){
     this.id = id;
     this.qty = qty;

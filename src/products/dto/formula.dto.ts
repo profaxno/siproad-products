@@ -2,6 +2,7 @@ import { ArrayNotEmpty, IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsPosit
 import { Type } from "class-transformer";
 
 export class FormulaDto {
+  
   @IsUUID()
   @IsOptional()
   id?: string;

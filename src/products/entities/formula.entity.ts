@@ -28,14 +28,14 @@ export class Formula {
   @ManyToOne(
     () => Company,
     (company) => company.formula,
-    {eager: true}
+    { eager: true }
   )
   company: Company;
 
   @OneToMany(
     () => FormulaElement,
     (formulaElement) => formulaElement.formula,
-    {eager: true}
+    { eager: true }
   )
   formulaElement: FormulaElement[];
 
