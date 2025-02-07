@@ -18,12 +18,13 @@ import { FormulaElement } from './entities/formula-element.entity';
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
 import { Product } from './entities/product.entity';
+import { ProductElement } from './entities/product-element.entity';
 import { ProductFormula } from './entities/product-formula.entity';
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Company, Element, Formula, FormulaElement, Product, ProductFormula])
+    TypeOrmModule.forFeature([Company, Element, Formula, FormulaElement, Product, ProductElement, ProductFormula])
   ],
   controllers: [CompanyController, ElementController, FormulaController, ProductController],
   providers: [CompanyService, ElementService, FormulaService, ProductService],

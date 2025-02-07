@@ -1,20 +1,19 @@
+import { In, Like, Repository } from 'typeorm';
+import { isUUID } from 'class-validator';
 
-import { In, InsertResult, Like, Repository } from 'typeorm';
-import { IsUUID, isUUID } from 'class-validator';
-
-import { HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { SearchDto } from 'src/common/dto/search.dto';
 
-import { productsResponseDto } from './dto/products-response-dto';
 import { ElementDto } from './dto/element.dto';
 import { Element } from './entities/element.entity';
 
 import { Company } from './entities/company.entity';
 import { CompanyService } from './company.service';
+import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
 
 @Injectable()
 export class ElementService {
@@ -35,11 +34,11 @@ export class ElementService {
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
   
-  updateElement(dto: ElementDto): Promise<productsResponseDto> {
+  updateElement(dto: ElementDto): Promise<ElementDto> {
     if(!dto.id)
       return this.createElement(dto); // * create
     
-    this.logger.log(`updateElement: init process... dto=${JSON.stringify(dto)}`);
+    this.logger.warn(`updateElement: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
     // * find company
@@ -51,7 +50,8 @@ export class ElementService {
       if(companyList.length == 0){
         const msg = `company not found, id=${dto.id}`;
         this.logger.warn(`updateElement: not executed (${msg})`);
-        return new productsResponseDto(HttpStatus.NOT_FOUND, msg);    
+        throw new NotFoundException(msg);
+        //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg);    
       }
 
       const company = companyList[0];
@@ -66,7 +66,8 @@ export class ElementService {
         if(entityList.length == 0){
           const msg = `element not found, id=${dto.id}`;
           this.logger.warn(`updateElement: not executed (${msg})`);
-          return new productsResponseDto(HttpStatus.NOT_FOUND, msg);  
+          throw new NotFoundException(msg);
+          //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg);  
         }
   
         let entity = entityList[0];
@@ -80,27 +81,29 @@ export class ElementService {
         
         return this.saveElement(entity)
         .then( (entity: Element) => {
-  
-          // * map to dto
-          const dto = new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id);
+          const dto = new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id); // * map to dto
   
           const end = performance.now();
           this.logger.log(`updateElement: executed, runtime=${(end - start) / 1000} seconds`);
-          return new productsResponseDto(HttpStatus.OK, 'updated OK', [dto]);
+          return dto;
+          //return new ProductsResponseDto(HttpStatus.OK, 'updated OK', [dto]);
         })
         
       })
 
     })
     .catch(error => {
+      if(error instanceof NotFoundException)
+        throw error;
+
       this.logger.error(`updateElement: error`, error);
       throw error;
     })
 
   }
 
-  createElement(dto: ElementDto): Promise<productsResponseDto> {
-    this.logger.log(`createElement: init process... dto=${JSON.stringify(dto)}`);
+  createElement(dto: ElementDto): Promise<ElementDto> {
+    this.logger.warn(`createElement: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
     // * find company
@@ -112,7 +115,8 @@ export class ElementService {
       if(companyList.length == 0){
         const msg = `company not found, id=${dto.id}`;
         this.logger.warn(`createElement: not executed (${msg})`);
-        return new productsResponseDto(HttpStatus.NOT_FOUND, msg);    
+        throw new NotFoundException(msg);
+        //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg);    
       }
 
       const company = companyList[0];
@@ -127,7 +131,8 @@ export class ElementService {
         if(entityList.length > 0){
           const msg = `element already exists, name=${dto.name}`;
           this.logger.warn(`createElement: not executed (${msg})`);
-          return new productsResponseDto(HttpStatus.BAD_REQUEST, msg);
+          throw new AlreadyExistException(msg);
+          //return new ProductsResponseDto(HttpStatus.BAD_REQUEST, msg);
         }
   
         // * create
@@ -140,23 +145,28 @@ export class ElementService {
   
         return this.saveElement(entity)
         .then( (entity: Element) => {
-          const dto = new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id)
+          const dto = new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id); // * map to dto 
+
           const end = performance.now();
           this.logger.log(`createElement: OK, runtime=${(end - start) / 1000} seconds`);
-          return new productsResponseDto(HttpStatus.CREATED, 'created OK', [dto]);
+          return dto;
+          //return new ProductsResponseDto(HttpStatus.OK, 'created OK', [dto]);
         })
   
       })
 
     })
     .catch(error => {
+      if(error instanceof NotFoundException || error instanceof AlreadyExistException)
+        throw error;
+
       this.logger.error(`createElement: error`, error);
       throw error;
     })
 
   }
 
-  findElements(companyId: string, paginationDto: PaginationDto, searchDto: SearchDto): Promise<productsResponseDto> {
+  findElements(companyId: string, paginationDto: PaginationDto, searchDto: SearchDto): Promise<ElementDto[]> {
     const start = performance.now();
 
     return this.findElementsByParams(paginationDto, searchDto, companyId)
@@ -166,21 +176,26 @@ export class ElementService {
       if(dtoList.length == 0){
         const msg = `elements not found`;
         this.logger.warn(`findElements: ${msg}`);
-        return new productsResponseDto(HttpStatus.NOT_FOUND, msg, []);
+        throw new NotFoundException(msg);
+        //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg, []);
       }
 
       const end = performance.now();
       this.logger.log(`findElements: executed, runtime=${(end - start) / 1000} seconds`);
-      return new productsResponseDto(HttpStatus.OK, 'OK', dtoList);
+      return dtoList;
+      //return new ProductsResponseDto(HttpStatus.OK, 'OK', dtoList);
     })
     .catch(error => {
+      if(error instanceof NotFoundException)
+        throw error;
+
       this.logger.error(`findElements: error`, error);
       throw error;
     })
 
   }
 
-  findOneElementByValue(companyId: string, value: string): Promise<productsResponseDto> {
+  findOneElementByValue(companyId: string, value: string): Promise<ElementDto[]> {
     const start = performance.now();
 
     const searchDto: SearchDto = new SearchDto(value);
@@ -192,22 +207,27 @@ export class ElementService {
       if(dtoList.length == 0){
         const msg = `element not found, value=${value}`;
         this.logger.warn(`findOneElementByValue: ${msg}`);
-        return new productsResponseDto(HttpStatus.NOT_FOUND, msg, []);
+        throw new NotFoundException(msg);
+        //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg, []);
       }
 
       const end = performance.now();
       this.logger.log(`findOneElementByValue: executed, runtime=${(end - start) / 1000} seconds`);
-      return new productsResponseDto(HttpStatus.OK, 'OK', dtoList);
+      return dtoList;
+      //return new ProductsResponseDto(HttpStatus.OK, 'OK', dtoList);
     })
     .catch(error => {
+      if(error instanceof NotFoundException)
+        throw error;
+
       this.logger.error(`findOneElementByValue: error`, error);
       throw error;
     })
 
   }
 
-  removeElement(id: string): Promise<productsResponseDto> {
-    this.logger.log(`removeElement: init process... id=${id}`);
+  removeElement(id: string): Promise<string> {
+    this.logger.log(`removeElement: starting process... id=${id}`);
     const start = performance.now();
 
     // * find element
@@ -218,7 +238,9 @@ export class ElementService {
       
       if(entityList.length == 0){
         const msg = `element not found, id=${id}`;
-        return new productsResponseDto(HttpStatus.NOT_FOUND, msg);
+        this.logger.warn(`removeElement: not executed (${msg})`);
+        throw new NotFoundException(msg);
+        //return new ProductsResponseDto(HttpStatus.NOT_FOUND, msg);
       }
 
       // * delete
@@ -226,15 +248,20 @@ export class ElementService {
       .then( () => {
         const end = performance.now();
         this.logger.log(`removeElement: OK, runtime=${(end - start) / 1000} seconds`);
-        return new productsResponseDto(HttpStatus.OK, 'delete OK');
+        return 'deleted';
+        //return new ProductsResponseDto(HttpStatus.OK, 'delete OK');
       })
 
     })
     .catch(error => {
+      if(error instanceof NotFoundException)
+        throw error;
 
       if(error.errno == 1217) {
-        this.logger.warn('removeElement: not executed, error', error);
-        return new productsResponseDto(HttpStatus.BAD_REQUEST, 'element is being used');
+        const msg = 'element is being used';
+        this.logger.warn(`removeProduct: not executed (${msg})`, error);
+        throw new IsBeingUsedException(msg);
+        //return new ProductsResponseDto(HttpStatus.BAD_REQUEST, 'product is being used');
       }
 
       this.logger.error('removeElement: error', error);
@@ -249,8 +276,8 @@ export class ElementService {
     // * search by partial name
     const value = searchDto.search
     if(value) {
-      const whereByName = { company: { id: companyId}, name: Like(`%${searchDto.search}%`), status: true };
-      const whereById   = { id: value, status: true };
+      const whereByName = { company: { id: companyId}, name: Like(`%${searchDto.search}%`), active: true };
+      const whereById   = { id: value, active: true };
       const where = isUUID(value) ? whereById : whereByName;
 
       return this.elementRepository.find({
@@ -270,7 +297,7 @@ export class ElementService {
             id: companyId
           },
           name: In(searchDto.searchList),
-          status: true,
+          active: true,
         }
       })
     }
@@ -283,7 +310,7 @@ export class ElementService {
         company: {
           id: companyId
         },
-        status: true }
+        active: true }
     })
     
   }

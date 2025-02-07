@@ -23,7 +23,7 @@ export class Formula {
   @Column('boolean', {
     default: true
   })
-  status: boolean
+  active: boolean
 
   @ManyToOne(
     () => Company,

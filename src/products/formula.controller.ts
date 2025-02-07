@@ -1,11 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException } from '@nestjs/common';
 
 import { PaginationDto } from 'src/common/dto/pagination.dto'; 
 import { SearchDto } from 'src/common/dto/search.dto';
 
 import { FormulaDto } from './dto/formula.dto';
-import { productsResponseDto } from './dto/products-response-dto';
+import { ProductsResponseDto } from './dto/products-response-dto';
 import { FormulaService } from './formula.service';
+import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
 
 @Controller('siproad-products')
 export class FormulaController {
@@ -18,71 +19,93 @@ export class FormulaController {
 
   @Patch('/formulas/update')
   @HttpCode(HttpStatus.OK)
-  updateFormula(@Body() dto: FormulaDto): Promise<productsResponseDto> {
+  updateFormula(@Body() dto: FormulaDto): Promise<ProductsResponseDto> {
     this.logger.log(`>>> updateFormula: dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
     return this.formulaService.updateFormula(dto)
-    .then( (response: productsResponseDto) => {
+    .then( (dto: FormulaDto) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, 'created/updated', [dto]);
       const end = performance.now();
       this.logger.log(`<<< updateFormula: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
+      if(error instanceof NotFoundException)
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+
+      if(error instanceof AlreadyExistException)
+        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, []);
+
       this.logger.error(error.stack);
-      return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }
 
   @Get('/formulas/:companyId')
-  findFormulas(@Param('companyId', ParseUUIDPipe) companyId: string, @Query() paginationDto: PaginationDto, @Body() searchDto: SearchDto): Promise<productsResponseDto> {
+  findFormulas(@Param('companyId', ParseUUIDPipe) companyId: string, @Query() paginationDto: PaginationDto, @Body() searchDto: SearchDto): Promise<ProductsResponseDto> {
     this.logger.log(`>>> findFormulas: companyId=${companyId}, paginationDto=${JSON.stringify(paginationDto)}, searchDto=${JSON.stringify(searchDto)}`);
     const start = performance.now();
 
     return this.formulaService.findFormulas(companyId, paginationDto, searchDto)
-    .then( (response: productsResponseDto) => {
+    .then( (dtoList: FormulaDto[]) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, 'executed', dtoList);
       const end = performance.now();
       this.logger.log(`<<< findFormulas: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
+      if(error instanceof NotFoundException)
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+
       this.logger.error(error.stack);
-      return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }
 
   @Get('/formulas/:companyId/:value')
-  findOneFormulaByValue(@Param('companyId', ParseUUIDPipe) companyId: string, @Param('value') value: string): Promise<productsResponseDto> {
+  findOneFormulaByValue(@Param('companyId', ParseUUIDPipe) companyId: string, @Param('value') value: string): Promise<ProductsResponseDto> {
     this.logger.log(`>>> findOneFormulaByValue: companyId=${companyId}, value=${value}`);
     const start = performance.now();
 
     return this.formulaService.findOneFormulaByValue(companyId, value)
-    .then( (response: productsResponseDto) => {
+    .then( (dtoList: FormulaDto[]) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, 'executed', dtoList);
       const end = performance.now();
       this.logger.log(`<<< findOneFormulaByValue: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
+      if(error instanceof NotFoundException)
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+
       this.logger.error(error.stack);
-      return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
 
   }
 
   @Delete('formulas/:id')
-  removeFormula(@Param('id', ParseUUIDPipe) id: string): Promise<productsResponseDto> {
+  removeFormula(@Param('id', ParseUUIDPipe) id: string): Promise<ProductsResponseDto> {
     this.logger.log(`>>> removeFormula: id=${id}`);
     const start = performance.now();
 
     return this.formulaService.removeFormula(id)
-    .then( (response: productsResponseDto) => {
+    .then( (msg: string) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, msg, []);
       const end = performance.now();
       this.logger.log(`<<< removeFormula: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
+      if(error instanceof NotFoundException)
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+
+      if(error instanceof IsBeingUsedException)
+        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, []);
+
       this.logger.error(error.stack);
-      return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }
   

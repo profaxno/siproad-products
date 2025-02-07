@@ -1,5 +1,6 @@
 import { Column, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Company } from "./company.entity";
+import { ProductElement } from "./product-element.entity";
 import { FormulaElement } from "./formula-element.entity";
 
 @Entity("pro_element")
@@ -31,7 +32,7 @@ export class Element {
   @Column('boolean', {
     default: true
   })
-  status: boolean
+  active: boolean
 
   @ManyToOne(
     () => Company,
@@ -39,6 +40,12 @@ export class Element {
     { eager: true }
   )
   company: Company;
+
+  @OneToMany(
+    () => ProductElement,
+    (productElement) => productElement.element
+  )
+  productElement: ProductElement;
 
   @OneToMany(
     () => FormulaElement,

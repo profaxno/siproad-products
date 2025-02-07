@@ -1,12 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException } from '@nestjs/common';
 
 import { PaginationDto } from 'src/common/dto/pagination.dto'; 
 import { SearchDto } from 'src/common/dto/search.dto';
+import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 import { ProductDto } from './dto/product.dto';
-import { productsResponseDto } from './dto/products-response-dto';
+import { ProductsResponseDto } from './dto/products-response-dto';
 import { ProductService } from './product.service';
-
+import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
 
 @Controller('siproad-products')
 export class ProductController {
@@ -19,71 +20,114 @@ export class ProductController {
 
   @Patch('/products/update')
   @HttpCode(HttpStatus.OK)
-  updateProduct(@Body() dto: ProductDto): Promise<productsResponseDto> {
+  updateProduct(@Body() dto: ProductDto): Promise<ProductsResponseDto> {
     this.logger.log(`>>> updateProduct: dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
     return this.productService.updateProduct(dto)
-    .then( (response: productsResponseDto) => {
+    .then( (dto: ProductDto) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, 'created/updated', [dto]);
       const end = performance.now();
       this.logger.log(`<<< updateProduct: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
+      if(error instanceof NotFoundException)
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+
+      if(error instanceof AlreadyExistException)
+        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, []);
+
       this.logger.error(error.stack);
-      return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
+    
+  }
+
+  @Patch('/products/updateBatch')
+  @HttpCode(HttpStatus.OK)
+  updateProductBatch(@Body() dtoList: ProductDto[]): Promise<ProductsResponseDto> {
+    this.logger.log(`>>> updateProductBatch: listSize=${dtoList.length}`);
+    const start = performance.now();
+
+    return this.productService.updateProductBatch(dtoList)
+    .then( (processResultDto: ProcessResultDto) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, "executed", processResultDto);
+      const end = performance.now();
+      this.logger.log(`<<< updateProductBatch: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      return response;
+    })
+    .catch( (error: Error) => {
+      this.logger.error(error.stack);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+    })
+
   }
 
   @Get('/products/:companyId')
-  findProducts(@Param('companyId', ParseUUIDPipe) companyId: string, @Query() paginationDto: PaginationDto, @Body() searchDto: SearchDto): Promise<productsResponseDto> {
+  findProducts(@Param('companyId', ParseUUIDPipe) companyId: string, @Query() paginationDto: PaginationDto, @Body() searchDto: SearchDto): Promise<ProductsResponseDto> {
     this.logger.log(`>>> findProducts: companyId=${companyId}, paginationDto=${JSON.stringify(paginationDto)}, searchDto=${JSON.stringify(searchDto)}`);
     const start = performance.now();
     
     return this.productService.findProducts(companyId, paginationDto, searchDto)
-    .then( (response: productsResponseDto) => {
+    .then( (dtoList: ProductDto[]) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, "executed", dtoList);
       const end = performance.now();
       this.logger.log(`<<< findProducts: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
+      if(error instanceof NotFoundException)
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+
       this.logger.error(error.stack);
-      return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }
 
   @Get('/products/:companyId/:value')
-  findOneProductByValue(@Param('companyId', ParseUUIDPipe) companyId: string, @Param('value') value: string): Promise<productsResponseDto> {
+  findOneProductByValue(@Param('companyId', ParseUUIDPipe) companyId: string, @Param('value') value: string): Promise<ProductsResponseDto> {
     this.logger.log(`>>> findOneProductByValue: companyId=${companyId}, value=${value}`);
     const start = performance.now();
 
     return this.productService.findOneProductByValue(companyId, value)
-    .then( (response: productsResponseDto) => {
+    .then( (dtoList: ProductDto[]) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, "executed", dtoList);
       const end = performance.now();
       this.logger.log(`<<< findOneProductByValue: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
+      if(error instanceof NotFoundException)
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+
       this.logger.error(error.stack);
-      return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
 
   }
 
   @Delete('products/:id')
-  removeProduct(@Param('id', ParseUUIDPipe) id: string): Promise<productsResponseDto> {
+  removeProduct(@Param('id', ParseUUIDPipe) id: string): Promise<ProductsResponseDto> {
     this.logger.log(`>>> removeProduct: id=${id}`);
     const start = performance.now();
 
     return this.productService.removeProduct(id)
-    .then( (response: productsResponseDto) => {
+    .then( (msg: string) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, msg, []);
       const end = performance.now();
       this.logger.log(`<<< removeProduct: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
+      if(error instanceof NotFoundException)
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+
+      if(error instanceof IsBeingUsedException)
+        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, []);
+
       this.logger.error(error.stack);
-      return new productsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
   }
   

@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Company } from "./company.entity";
-import { FormulaElement } from "./formula-element.entity";
+import { ProductElement } from "./product-element.entity";
 import { ProductFormula } from "./product-formula.entity";
 
 @Entity("pro_product")
@@ -16,7 +16,8 @@ export class Product {
   name: string;
 
   @Column('varchar', { 
-    length: 255
+    length: 255,
+    nullable: true
   })
   description: string;
 
@@ -26,12 +27,17 @@ export class Product {
   @Column('double')
   price: number;
 
+  @Column('boolean', {
+    default: false
+  })
+  hasFormula: boolean
+
   // TODO: falta agregar createAt y UpdatedAt
 
   @Column('boolean', {
     default: true
   })
-  status: boolean
+  active: boolean
 
   @ManyToOne(
     () => Company,
@@ -39,6 +45,13 @@ export class Product {
     { eager: true }
   )
   company: Company;
+
+  @OneToMany(
+    () => ProductElement,
+    (productFormula) => productFormula.product,
+    { eager: true }
+  )
+  productElement: ProductElement[];
 
   @OneToMany(
     () => ProductFormula,

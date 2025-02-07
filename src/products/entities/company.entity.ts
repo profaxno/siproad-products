@@ -20,7 +20,7 @@ export class Company {
   @Column('boolean', {
     default: true
   })
-  status: boolean
+  active: boolean
 
   @OneToMany(
     () => Element,
