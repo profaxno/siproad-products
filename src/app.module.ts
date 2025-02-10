@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { config } from './config/app.config';
 import { CommonModule } from './common/common.module';
 
+// TODO: HACER EL README
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -19,7 +20,7 @@ import { CommonModule } from './common/common.module';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      synchronize: false,
+      synchronize: false, // ! Para produccion esta parametro debe estar en false
       autoLoadEntities: true
     }),
     ProductsModule,

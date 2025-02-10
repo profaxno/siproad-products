@@ -11,6 +11,7 @@ import { SearchDto } from 'src/common/dto/search.dto';
 import { CompanyDto } from './dto/company.dto';
 import { Company } from './entities/company.entity';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
+import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 @Injectable()
 export class CompanyService {
@@ -29,6 +30,31 @@ export class CompanyService {
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
   
+  async updateCompanyBatch(dtoList: CompanyDto[]): Promise<ProcessResultDto>{
+    this.logger.warn(`updateCompanyBatch: starting process... listSize=${dtoList.length}`);
+    const start = performance.now();
+    
+    let processResultDto: ProcessResultDto = new ProcessResultDto(dtoList.length);
+    let i = 0;
+    for (const dto of dtoList) {
+      
+      await this.updateCompany(dto)
+      .then( () => {
+        processResultDto.rowsOK++;
+        processResultDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
+      })
+      .catch(error => {
+        processResultDto.rowsKO++;
+        processResultDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
+      })
+
+    }
+    
+    const end = performance.now();
+    this.logger.log(`updateCompanyBatch: executed, runtime=${(end - start) / 1000} seconds`);
+    return processResultDto;
+  }
+
   updateCompany(dto: CompanyDto): Promise<CompanyDto> {
     if(!dto.id)
       return this.createCompany(dto); // * create

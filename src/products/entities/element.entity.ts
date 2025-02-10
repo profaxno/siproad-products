@@ -23,7 +23,6 @@ export class Element {
 
   @Column('varchar', { 
     length: 5,
-    unique: true
   })
   unit: string;
 

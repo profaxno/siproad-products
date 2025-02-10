@@ -7,6 +7,7 @@ import { ElementDto } from './dto/element.dto';
 import { ProductsResponseDto } from './dto/products-response-dto';
 import { ElementService } from './element.service';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
+import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 
 @Controller('siproad-products')
@@ -26,21 +27,41 @@ export class ElementController {
 
     return this.elementService.updateElement(dto)
     .then( (dto: ElementDto) => {
-      const response = new ProductsResponseDto(HttpStatus.OK, 'created/updated', [dto]);
+      const response = new ProductsResponseDto(HttpStatus.OK, 'created/updated', 1, [dto]);
       const end = performance.now();
       this.logger.log(`<<< updateElement: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
-        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
       
       if(error instanceof AlreadyExistException)
-        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, []);
+        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, 0, []);
 
       this.logger.error(error.stack);
       return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
+  }
+
+  @Post('/elements/updateBatch')
+  @HttpCode(HttpStatus.OK)
+  updateElementBatch(@Body() dtoList: ElementDto[]): Promise<ProductsResponseDto> {
+    this.logger.log(`>>> updateElementBatch: listSize=${dtoList.length}`);
+    const start = performance.now();
+
+    return this.elementService.updateElementBatch(dtoList)
+    .then( (processResultDto: ProcessResultDto) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, "executed", undefined, processResultDto);
+      const end = performance.now();
+      this.logger.log(`<<< updateElementBatch: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      return response;
+    })
+    .catch( (error: Error) => {
+      this.logger.error(error.stack);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+    })
+
   }
 
   @Get('/elements/:companyId')
@@ -50,14 +71,14 @@ export class ElementController {
     
     return this.elementService.findElements(companyId, paginationDto, searchDto)
     .then( (dtoList: ElementDto[]) => {
-      const response = new ProductsResponseDto(HttpStatus.OK, "executed", dtoList);
+      const response = new ProductsResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
       const end = performance.now();
       this.logger.log(`<<< findElements: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
-        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
 
       this.logger.error(error.stack);
       return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
@@ -71,14 +92,14 @@ export class ElementController {
 
     return this.elementService.findOneElementByValue(companyId, value)
     .then( (dtoList: ElementDto[]) => {
-      const response = new ProductsResponseDto(HttpStatus.OK, "executed", dtoList);
+      const response = new ProductsResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
       const end = performance.now();
       this.logger.log(`<<< findOneElementByValue: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
-        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
 
       this.logger.error(error.stack);
       return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
@@ -100,10 +121,10 @@ export class ElementController {
     })
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
-        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
       
       if(error instanceof IsBeingUsedException)
-        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, []);
+        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, 0, []);
 
       this.logger.error(error.stack);
       return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);

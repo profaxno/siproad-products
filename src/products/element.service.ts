@@ -14,6 +14,7 @@ import { Element } from './entities/element.entity';
 import { Company } from './entities/company.entity';
 import { CompanyService } from './company.service';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
+import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 @Injectable()
 export class ElementService {
@@ -34,6 +35,31 @@ export class ElementService {
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
   
+  async updateElementBatch(dtoList: ElementDto[]): Promise<ProcessResultDto>{
+    this.logger.warn(`updateElementBatch: starting process... listSize=${dtoList.length}`);
+    const start = performance.now();
+    
+    let processResultDto: ProcessResultDto = new ProcessResultDto(dtoList.length);
+    let i = 0;
+    for (const dto of dtoList) {
+      
+      await this.updateElement(dto)
+      .then( () => {
+        processResultDto.rowsOK++;
+        processResultDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
+      })
+      .catch(error => {
+        processResultDto.rowsKO++;
+        processResultDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
+      })
+
+    }
+    
+    const end = performance.now();
+    this.logger.log(`updateElementBatch: executed, runtime=${(end - start) / 1000} seconds`);
+    return processResultDto;
+  }
+
   updateElement(dto: ElementDto): Promise<ElementDto> {
     if(!dto.id)
       return this.createElement(dto); // * create

@@ -1,4 +1,4 @@
-import { Controller, Get, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException, Post } from '@nestjs/common';
 
 import { PaginationDto } from 'src/common/dto/pagination.dto'; 
 import { SearchDto } from 'src/common/dto/search.dto';
@@ -7,6 +7,7 @@ import { FormulaDto } from './dto/formula.dto';
 import { ProductsResponseDto } from './dto/products-response-dto';
 import { FormulaService } from './formula.service';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
+import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 @Controller('siproad-products')
 export class FormulaController {
@@ -25,21 +26,41 @@ export class FormulaController {
 
     return this.formulaService.updateFormula(dto)
     .then( (dto: FormulaDto) => {
-      const response = new ProductsResponseDto(HttpStatus.OK, 'created/updated', [dto]);
+      const response = new ProductsResponseDto(HttpStatus.OK, 'created/updated', 1, [dto]);
       const end = performance.now();
       this.logger.log(`<<< updateFormula: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
-        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
 
       if(error instanceof AlreadyExistException)
-        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, []);
+        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, 0, []);
 
       this.logger.error(error.stack);
       return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
     })
+  }
+
+  @Post('/formulas/updateBatch')
+  @HttpCode(HttpStatus.OK)
+  updateFormulaBatch(@Body() dtoList: FormulaDto[]): Promise<ProductsResponseDto> {
+    this.logger.log(`>>> updateFormulaBatch: listSize=${dtoList.length}`);
+    const start = performance.now();
+
+    return this.formulaService.updateFormulaBatch(dtoList)
+    .then( (processResultDto: ProcessResultDto) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, "executed", undefined, processResultDto);
+      const end = performance.now();
+      this.logger.log(`<<< updateFormulaBatch: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
+      return response;
+    })
+    .catch( (error: Error) => {
+      this.logger.error(error.stack);
+      return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+    })
+
   }
 
   @Get('/formulas/:companyId')
@@ -49,14 +70,14 @@ export class FormulaController {
 
     return this.formulaService.findFormulas(companyId, paginationDto, searchDto)
     .then( (dtoList: FormulaDto[]) => {
-      const response = new ProductsResponseDto(HttpStatus.OK, 'executed', dtoList);
+      const response = new ProductsResponseDto(HttpStatus.OK, 'executed', dtoList.length, dtoList);
       const end = performance.now();
       this.logger.log(`<<< findFormulas: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
-        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
 
       this.logger.error(error.stack);
       return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
@@ -70,14 +91,14 @@ export class FormulaController {
 
     return this.formulaService.findOneFormulaByValue(companyId, value)
     .then( (dtoList: FormulaDto[]) => {
-      const response = new ProductsResponseDto(HttpStatus.OK, 'executed', dtoList);
+      const response = new ProductsResponseDto(HttpStatus.OK, 'executed', dtoList.length, dtoList);
       const end = performance.now();
       this.logger.log(`<<< findOneFormulaByValue: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
-        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
 
       this.logger.error(error.stack);
       return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
@@ -92,17 +113,17 @@ export class FormulaController {
 
     return this.formulaService.removeFormula(id)
     .then( (msg: string) => {
-      const response = new ProductsResponseDto(HttpStatus.OK, msg, []);
+      const response = new ProductsResponseDto(HttpStatus.OK, msg);
       const end = performance.now();
       this.logger.log(`<<< removeFormula: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
     })
     .catch( (error: Error) => {
       if(error instanceof NotFoundException)
-        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, []);
+        return new ProductsResponseDto(HttpStatus.NOT_FOUND, error.message, 0, []);
 
       if(error instanceof IsBeingUsedException)
-        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, []);
+        return new ProductsResponseDto(HttpStatus.BAD_REQUEST, error.message, 0, []);
 
       this.logger.error(error.stack);
       return new ProductsResponseDto(HttpStatus.INTERNAL_SERVER_ERROR, error.message);

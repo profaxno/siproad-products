@@ -17,6 +17,7 @@ import { Element } from './entities/element.entity';
 import { CompanyService } from './company.service';
 import { Company } from './entities/company.entity';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
+import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 @Injectable()
 export class FormulaService {
@@ -41,6 +42,31 @@ export class FormulaService {
     
   ){
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
+  }
+
+  async updateFormulaBatch(dtoList: FormulaDto[]): Promise<ProcessResultDto>{
+    this.logger.warn(`updateFormulaBatch: starting process... listSize=${dtoList.length}`);
+    const start = performance.now();
+    
+    let processResultDto: ProcessResultDto = new ProcessResultDto(dtoList.length);
+    let i = 0;
+    for (const dto of dtoList) {
+      
+      await this.updateFormula(dto)
+      .then( () => {
+        processResultDto.rowsOK++;
+        processResultDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
+      })
+      .catch(error => {
+        processResultDto.rowsKO++;
+        processResultDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
+      })
+
+    }
+    
+    const end = performance.now();
+    this.logger.log(`updateFormulaBatch: executed, runtime=${(end - start) / 1000} seconds`);
+    return processResultDto;
   }
 
   updateFormula(dto: FormulaDto): Promise<FormulaDto> {

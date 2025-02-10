@@ -66,11 +66,11 @@ export class ProductService {
       await this.updateProduct(dto)
       .then( () => {
         processResultDto.rowsOK++;
-        processResultDto.detailsRowsOK.push(`(${i++}) productName=${dto.name}, message=OK`);
+        processResultDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
       })
       .catch(error => {
         processResultDto.rowsKO++;
-        processResultDto.detailsRowsKO.push(`(${i++}) productName=${dto.name}, error=${error}`);
+        processResultDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
       })
 
     }

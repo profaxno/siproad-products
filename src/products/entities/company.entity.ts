@@ -3,7 +3,7 @@ import { Element } from "./element.entity";
 import { Formula } from "./formula.entity";
 import { Product } from "./product.entity";
 
-@Entity("gen_company")
+@Entity("pro_company")
 export class Company {
   
   @PrimaryGeneratedColumn('uuid')
