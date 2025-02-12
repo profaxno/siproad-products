@@ -1,12 +1,10 @@
 import { In, Like, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
+import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { SearchDto } from 'src/common/dto/search.dto';
 
 import { ElementDto } from './dto/element.dto';
 import { Element } from './entities/element.entity';
@@ -14,7 +12,6 @@ import { Element } from './entities/element.entity';
 import { Company } from './entities/company.entity';
 import { CompanyService } from './company.service';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
-import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 @Injectable()
 export class ElementService {
@@ -35,29 +32,29 @@ export class ElementService {
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
   
-  async updateElementBatch(dtoList: ElementDto[]): Promise<ProcessResultDto>{
+  async updateElementBatch(dtoList: ElementDto[]): Promise<ProcessSummaryDto>{
     this.logger.warn(`updateElementBatch: starting process... listSize=${dtoList.length}`);
     const start = performance.now();
     
-    let processResultDto: ProcessResultDto = new ProcessResultDto(dtoList.length);
+    let processSummaryDto: ProcessSummaryDto = new ProcessSummaryDto(dtoList.length);
     let i = 0;
     for (const dto of dtoList) {
       
       await this.updateElement(dto)
       .then( () => {
-        processResultDto.rowsOK++;
-        processResultDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
+        processSummaryDto.rowsOK++;
+        processSummaryDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
       })
       .catch(error => {
-        processResultDto.rowsKO++;
-        processResultDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
+        processSummaryDto.rowsKO++;
+        processSummaryDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
       })
 
     }
     
     const end = performance.now();
     this.logger.log(`updateElementBatch: executed, runtime=${(end - start) / 1000} seconds`);
-    return processResultDto;
+    return processSummaryDto;
   }
 
   updateElement(dto: ElementDto): Promise<ElementDto> {
@@ -68,9 +65,9 @@ export class ElementService {
     const start = performance.now();
 
     // * find company
-    const searchDto: SearchDto = new SearchDto(dto.companyId);
+    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
     
-    return this.companyService.findCompaniesByParams({}, searchDto)
+    return this.companyService.findCompaniesByParams({}, inputDto)
     .then( (companyList: Company[]) => {
 
       if(companyList.length == 0){
@@ -83,9 +80,9 @@ export class ElementService {
       const company = companyList[0];
 
       // * find element
-      const searchDto: SearchDto = new SearchDto(dto.id);
+      const inputDto: SearchInputDto = new SearchInputDto(dto.id);
         
-      return this.findElementsByParams({}, searchDto)
+      return this.findElementsByParams({}, inputDto)
       .then( (entityList: Element[]) => {
 
         // * validate
@@ -133,9 +130,9 @@ export class ElementService {
     const start = performance.now();
 
     // * find company
-    const searchDto: SearchDto = new SearchDto(dto.companyId);
+    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
     
-    return this.companyService.findCompaniesByParams({}, searchDto)
+    return this.companyService.findCompaniesByParams({}, inputDto)
     .then( (companyList: Company[]) => {
 
       if(companyList.length == 0){
@@ -148,9 +145,9 @@ export class ElementService {
       const company = companyList[0];
 
       // * find element
-      const searchDto: SearchDto = new SearchDto(undefined, [dto.name]);
+      const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
         
-      return this.findElementsByParams({}, searchDto, company.id)
+      return this.findElementsByParams({}, inputDto, company.id)
       .then( (entityList: Element[]) => {
 
         // * validate
@@ -192,10 +189,10 @@ export class ElementService {
 
   }
 
-  findElements(companyId: string, paginationDto: PaginationDto, searchDto: SearchDto): Promise<ElementDto[]> {
+  findElements(companyId: string, paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<ElementDto[]> {
     const start = performance.now();
 
-    return this.findElementsByParams(paginationDto, searchDto, companyId)
+    return this.findElementsByParams(paginationDto, inputDto, companyId)
     .then( (entityList: Element[]) => entityList.map( (entity: Element) => new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id) ) )// * map entities to DTOs
     .then( (dtoList: ElementDto[]) => {
       
@@ -224,9 +221,9 @@ export class ElementService {
   findOneElementByValue(companyId: string, value: string): Promise<ElementDto[]> {
     const start = performance.now();
 
-    const searchDto: SearchDto = new SearchDto(value);
+    const inputDto: SearchInputDto = new SearchInputDto(value);
     
-    return this.findElementsByParams({}, searchDto, companyId)
+    return this.findElementsByParams({}, inputDto, companyId)
     .then( (entityList: Element[]) => entityList.map( (entity: Element) => new ElementDto(entity.company.id, entity.name, entity.cost, entity.stock, entity.unit, entity.id) ) )// * map entities to DTOs
     .then( (dtoList: ElementDto[]) => {
       
@@ -257,9 +254,9 @@ export class ElementService {
     const start = performance.now();
 
     // * find element
-    const searchDto: SearchDto = new SearchDto(id);
+    const inputDto: SearchInputDto = new SearchInputDto(id);
     
-    return this.findElementsByParams({}, searchDto)
+    return this.findElementsByParams({}, inputDto)
     .then( (entityList: Element[]) => {
       
       if(entityList.length == 0){
@@ -296,13 +293,13 @@ export class ElementService {
 
   }
 
-  private findElementsByParams(paginationDto: PaginationDto, searchDto: SearchDto, companyId?: string): Promise<Element[]> {
+  private findElementsByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto, companyId?: string): Promise<Element[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
     // * search by partial name
-    const value = searchDto.search
+    const value = inputDto.search
     if(value) {
-      const whereByName = { company: { id: companyId}, name: Like(`%${searchDto.search}%`), active: true };
+      const whereByName = { company: { id: companyId}, name: Like(`%${inputDto.search}%`), active: true };
       const whereById   = { id: value, active: true };
       const where = isUUID(value) ? whereById : whereByName;
 
@@ -314,7 +311,7 @@ export class ElementService {
     }
 
     // * search by names
-    if(searchDto.searchList) {
+    if(inputDto.searchList) {
       return this.elementRepository.find({
         take: limit,
         skip: (page - 1) * limit,
@@ -322,7 +319,7 @@ export class ElementService {
           company: {
             id: companyId
           },
-          name: In(searchDto.searchList),
+          name: In(inputDto.searchList),
           active: true,
         }
       })

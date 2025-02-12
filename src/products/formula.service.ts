@@ -1,12 +1,10 @@
 import { In, InsertResult, Like, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
+import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { SearchDto } from 'src/common/dto/search.dto';
 
 import { FormulaDto, FormulaElementDto } from './dto/formula.dto';
 import { Formula } from './entities/formula.entity';
@@ -17,7 +15,6 @@ import { Element } from './entities/element.entity';
 import { CompanyService } from './company.service';
 import { Company } from './entities/company.entity';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
-import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 @Injectable()
 export class FormulaService {
@@ -44,29 +41,29 @@ export class FormulaService {
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
 
-  async updateFormulaBatch(dtoList: FormulaDto[]): Promise<ProcessResultDto>{
+  async updateFormulaBatch(dtoList: FormulaDto[]): Promise<ProcessSummaryDto>{
     this.logger.warn(`updateFormulaBatch: starting process... listSize=${dtoList.length}`);
     const start = performance.now();
     
-    let processResultDto: ProcessResultDto = new ProcessResultDto(dtoList.length);
+    let processSummaryDto: ProcessSummaryDto = new ProcessSummaryDto(dtoList.length);
     let i = 0;
     for (const dto of dtoList) {
       
       await this.updateFormula(dto)
       .then( () => {
-        processResultDto.rowsOK++;
-        processResultDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
+        processSummaryDto.rowsOK++;
+        processSummaryDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
       })
       .catch(error => {
-        processResultDto.rowsKO++;
-        processResultDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
+        processSummaryDto.rowsKO++;
+        processSummaryDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
       })
 
     }
     
     const end = performance.now();
     this.logger.log(`updateFormulaBatch: executed, runtime=${(end - start) / 1000} seconds`);
-    return processResultDto;
+    return processSummaryDto;
   }
 
   updateFormula(dto: FormulaDto): Promise<FormulaDto> {
@@ -77,9 +74,9 @@ export class FormulaService {
     const start = performance.now();
 
     // * find company
-    const searchDto: SearchDto = new SearchDto(dto.companyId);
+    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
     
-    return this.companyService.findCompaniesByParams({}, searchDto)
+    return this.companyService.findCompaniesByParams({}, inputDto)
     .then( (companyList: Company[]) => {
 
       if(companyList.length == 0){
@@ -92,9 +89,9 @@ export class FormulaService {
       const company = companyList[0];
 
       // * find formula
-      const searchDto: SearchDto = new SearchDto(dto.id);
+      const inputDto: SearchInputDto = new SearchInputDto(dto.id);
         
-      return this.findFormulasByParams({}, searchDto)
+      return this.findFormulasByParams({}, inputDto)
       .then( (entityList: Formula[]) => {
 
         // * validate
@@ -140,9 +137,9 @@ export class FormulaService {
     const start = performance.now();
 
     // * find company
-    const searchDto: SearchDto = new SearchDto(dto.companyId);
+    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
 
-    return this.companyService.findCompaniesByParams({}, searchDto)
+    return this.companyService.findCompaniesByParams({}, inputDto)
     .then( (companyList: Company[]) => {
 
       if(companyList.length == 0){
@@ -155,9 +152,9 @@ export class FormulaService {
       const company = companyList[0];
 
       // * find formula
-      const searchDto: SearchDto = new SearchDto(undefined, [dto.name]);
+      const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
       
-      return this.findFormulasByParams({}, searchDto, company.id)
+      return this.findFormulasByParams({}, inputDto, company.id)
       .then( (entityList: Formula[]) => {
   
         // * validate
@@ -202,10 +199,10 @@ export class FormulaService {
     
   }
 
-  findFormulas(companyId: string, paginationDto: PaginationDto, searchDto: SearchDto): Promise<FormulaDto[]> {
+  findFormulas(companyId: string, paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<FormulaDto[]> {
     const start = performance.now();
 
-    return this.findFormulasByParams(paginationDto, searchDto, companyId)
+    return this.findFormulasByParams(paginationDto, inputDto, companyId)
     .then( (entityList: Formula[]) => entityList.map( (entity) => this.generateFormulaWithElementList(entity, entity.formulaElement) ) )
     .then( (dtoList: FormulaDto[]) => {
       
@@ -230,10 +227,10 @@ export class FormulaService {
 
   findOneFormulaByValue(companyId: string, value: string): Promise<FormulaDto[]> {
     const start = performance.now();
-    const searchDto: SearchDto = new SearchDto(value);
+    const inputDto: SearchInputDto = new SearchInputDto(value);
         
     // * find element
-    return this.findFormulasByParams({}, searchDto, companyId)
+    return this.findFormulasByParams({}, inputDto, companyId)
     .then( (entityList: Formula[]) => entityList.map( (entity) => this.generateFormulaWithElementList(entity, entity.formulaElement) ) )
     .then( (dtoList: FormulaDto[]) => {
       
@@ -264,9 +261,9 @@ export class FormulaService {
     const start = performance.now();
 
     // * find formula
-    const searchDto: SearchDto = new SearchDto(id);
+    const inputDto: SearchInputDto = new SearchInputDto(id);
     
-    return this.findFormulasByParams({}, searchDto)
+    return this.findFormulasByParams({}, inputDto)
     .then( (entityList: Formula[]) => {
   
       // * validate
@@ -310,9 +307,9 @@ export class FormulaService {
   //   const start = performance.now();
 
   //   // * find formula
-  //   const searchDto: SearchDto = new SearchDto(id);
+  //   const inputDto: SearchInputDto = new SearchInputDto(id);
     
-  //   return this.findFormulasByParams({}, searchDto)
+  //   return this.findFormulasByParams({}, inputDto)
   //   .then( (entityList: Formula[]) => {
   
   //     // * validate
@@ -349,14 +346,14 @@ export class FormulaService {
 
   // }
 
-  private findFormulasByParams(paginationDto: PaginationDto, searchDto: SearchDto, companyId?: string): Promise<Formula[]> {
+  private findFormulasByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto, companyId?: string): Promise<Formula[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
     // * search by partial name
-    if(searchDto.search) {
-      const whereByName = { company: { id: companyId }, name: Like(`%${searchDto.search}%`), active: true };
-      const whereById   = { id: searchDto.search, active: true };
-      const where = isUUID(searchDto.search) ? whereById : whereByName;
+    if(inputDto.search) {
+      const whereByName = { company: { id: companyId }, name: Like(`%${inputDto.search}%`), active: true };
+      const whereById   = { id: inputDto.search, active: true };
+      const where = isUUID(inputDto.search) ? whereById : whereByName;
 
       return this.formulaRepository.find({
         take: limit,
@@ -369,7 +366,7 @@ export class FormulaService {
     }
 
     // * search by names
-    if(searchDto.searchList) {
+    if(inputDto.searchList) {
       return this.formulaRepository.find({
         take: limit,
         skip: (page - 1) * limit,
@@ -377,7 +374,7 @@ export class FormulaService {
           company: { 
             id: companyId 
           },
-          name: In(searchDto.searchList),
+          name: In(inputDto.searchList),
           active: true,
         },
         relations: {

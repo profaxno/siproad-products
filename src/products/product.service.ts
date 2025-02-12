@@ -1,13 +1,10 @@
 import { In, InsertResult, Like, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
+import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { SearchDto } from 'src/common/dto/search.dto';
-import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 import { ProductDto, ProductElementDto, ProductFormulaDto } from './dto/product.dto';
 import { Product } from './entities/product.entity';
@@ -55,11 +52,11 @@ export class ProductService {
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
 
-  async updateProductBatch(dtoList: ProductDto[]): Promise<ProcessResultDto>{
+  async updateProductBatch(dtoList: ProductDto[]): Promise<ProcessSummaryDto>{
     this.logger.warn(`updateProductBatch: starting process... listSize=${dtoList.length}`);
     const start = performance.now();
     
-    let processResultDto: ProcessResultDto = new ProcessResultDto(dtoList.length);
+    let processResultDto: ProcessSummaryDto = new ProcessSummaryDto(dtoList.length);
     let i = 0;
     for (const dto of dtoList) {
       
@@ -88,9 +85,9 @@ export class ProductService {
     const start = performance.now();
 
     // * find company
-    const searchDto: SearchDto = new SearchDto(dto.companyId);
+    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
     
-    return this.companyService.findCompaniesByParams({}, searchDto)
+    return this.companyService.findCompaniesByParams({}, inputDto)
     .then( (companyList: Company[]) => {
 
       if(companyList.length == 0){
@@ -103,9 +100,9 @@ export class ProductService {
       const company = companyList[0];
 
       // * find product
-      const searchDto: SearchDto = new SearchDto(dto.id);
+      const inputDto: SearchInputDto = new SearchInputDto(dto.id);
         
-      return this.findProductsByParams({}, searchDto)
+      return this.findProductsByParams({}, inputDto)
       .then( (entityList: Product[]) => {
 
         // * validate
@@ -158,9 +155,9 @@ export class ProductService {
     const start = performance.now();
 
     // * find company
-    const searchDto: SearchDto = new SearchDto(dto.companyId);
+    const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
 
-    return this.companyService.findCompaniesByParams({}, searchDto)
+    return this.companyService.findCompaniesByParams({}, inputDto)
     .then( (companyList: Company[]) => {
 
       if(companyList.length == 0){
@@ -173,9 +170,9 @@ export class ProductService {
       const company = companyList[0];
 
       // * find product
-      const searchDto: SearchDto = new SearchDto(undefined, [dto.name]);
+      const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
       
-      return this.findProductsByParams({}, searchDto, company.id)
+      return this.findProductsByParams({}, inputDto, company.id)
       .then( (entityList: Product[]) => {
   
         // * validate
@@ -231,9 +228,9 @@ export class ProductService {
   //   const start = performance.now();
 
   //   // * find company
-  //   const searchDto: SearchDto = new SearchDto(dto.companyId);
+  //   const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
     
-  //   return this.companyService.findCompaniesByParams({}, searchDto)
+  //   return this.companyService.findCompaniesByParams({}, inputDto)
   //   .then( (companyList: Company[]) => {
 
   //     if(companyList.length == 0){
@@ -246,9 +243,9 @@ export class ProductService {
   //     const company = companyList[0];
 
   //     // * find product
-  //     const searchDto: SearchDto = new SearchDto(dto.id);
+  //     const inputDto: SearchInputDto = new SearchInputDto(dto.id);
         
-  //     return this.findProductsByParams({}, searchDto)
+  //     return this.findProductsByParams({}, inputDto)
   //     .then( (entityList: Product[]) => {
 
   //       // * validate
@@ -299,9 +296,9 @@ export class ProductService {
   //   const start = performance.now();
 
   //   // * find company
-  //   const searchDto: SearchDto = new SearchDto(dto.companyId);
+  //   const inputDto: SearchInputDto = new SearchInputDto(dto.companyId);
 
-  //   return this.companyService.findCompaniesByParams({}, searchDto)
+  //   return this.companyService.findCompaniesByParams({}, inputDto)
   //   .then( (companyList: Company[]) => {
 
   //     if(companyList.length == 0){
@@ -314,9 +311,9 @@ export class ProductService {
   //     const company = companyList[0];
 
   //     // * find product
-  //     const searchDto: SearchDto = new SearchDto(undefined, [dto.name]);
+  //     const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
       
-  //     return this.findProductsByParams({}, searchDto, company.id)
+  //     return this.findProductsByParams({}, inputDto, company.id)
   //     .then( (entityList: Product[]) => {
   
   //       // * validate
@@ -365,10 +362,10 @@ export class ProductService {
     
   // }
 
-  findProducts(companyId: string, paginationDto: PaginationDto, searchDto: SearchDto): Promise<ProductDto[]> {
+  findProducts(companyId: string, paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<ProductDto[]> {
     const start = performance.now();
 
-    return this.findProductsByParams(paginationDto, searchDto, companyId)
+    return this.findProductsByParams(paginationDto, inputDto, companyId)
     .then( (entityList: Product[]) => entityList.map( (entity) => this.generateProductWithAssociationList(entity, entity.productElement, entity.productFormula) ) )
     .then( (dtoList: ProductDto[]) => {
       
@@ -397,9 +394,9 @@ export class ProductService {
   findOneProductByValue(companyId: string, value: string): Promise<ProductDto[]> {
     const start = performance.now();
 
-    const searchDto: SearchDto = new SearchDto(value);
+    const inputDto: SearchInputDto = new SearchInputDto(value);
 
-    return this.findProductsByParams({}, searchDto, companyId)
+    return this.findProductsByParams({}, inputDto, companyId)
     .then( (entityList: Product[]) => entityList.map( (entity) => this.generateProductWithAssociationList(entity, entity.productElement, entity.productFormula) ) )
     .then( (dtoList: ProductDto[]) => {
       
@@ -430,9 +427,9 @@ export class ProductService {
     const start = performance.now();
 
     // * find product
-    const searchDto: SearchDto = new SearchDto(id);
+    const inputDto: SearchInputDto = new SearchInputDto(id);
     
-    return this.findProductsByParams({}, searchDto)
+    return this.findProductsByParams({}, inputDto)
     .then( (entityList: Product[]) => {
   
       // * validate
@@ -470,14 +467,14 @@ export class ProductService {
 
   }
 
-  findProductsByParams(paginationDto: PaginationDto, searchDto: SearchDto, companyId?: string): Promise<Product[]> {
+  findProductsByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto, companyId?: string): Promise<Product[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
     // * search by partial name
-    if(searchDto.search) {
-      const whereByName = { company: { id: companyId }, name: Like(`%${searchDto.search}%`), active: true };
-      const whereById   = { id: searchDto.search, active: true };
-      const where = isUUID(searchDto.search) ? whereById : whereByName;
+    if(inputDto.search) {
+      const whereByName = { company: { id: companyId }, name: Like(`%${inputDto.search}%`), active: true };
+      const whereById   = { id: inputDto.search, active: true };
+      const where = isUUID(inputDto.search) ? whereById : whereByName;
 
       return this.productRepository.find({
         take: limit,
@@ -491,7 +488,7 @@ export class ProductService {
     }
 
     // * search by names
-    if(searchDto.searchList) {
+    if(inputDto.searchList) {
       return this.productRepository.find({
         take: limit,
         skip: (page - 1) * limit,
@@ -499,7 +496,7 @@ export class ProductService {
           company: { 
             id: companyId 
           },
-          name: In(searchDto.searchList),
+          name: In(inputDto.searchList),
           active: true,
         },
         relations: {

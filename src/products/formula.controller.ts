@@ -1,13 +1,11 @@
-import { Controller, Get, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException, Post } from '@nestjs/common';
+import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
-import { PaginationDto } from 'src/common/dto/pagination.dto'; 
-import { SearchDto } from 'src/common/dto/search.dto';
+import { Controller, Get, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException, Post } from '@nestjs/common';
 
 import { FormulaDto } from './dto/formula.dto';
 import { ProductsResponseDto } from './dto/products-response-dto';
 import { FormulaService } from './formula.service';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
-import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 @Controller('siproad-products')
 export class FormulaController {
@@ -50,8 +48,8 @@ export class FormulaController {
     const start = performance.now();
 
     return this.formulaService.updateFormulaBatch(dtoList)
-    .then( (processResultDto: ProcessResultDto) => {
-      const response = new ProductsResponseDto(HttpStatus.OK, "executed", undefined, processResultDto);
+    .then( (processSummaryDto: ProcessSummaryDto) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, "executed", undefined, processSummaryDto);
       const end = performance.now();
       this.logger.log(`<<< updateFormulaBatch: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
@@ -64,11 +62,11 @@ export class FormulaController {
   }
 
   @Get('/formulas/:companyId')
-  findFormulas(@Param('companyId', ParseUUIDPipe) companyId: string, @Query() paginationDto: PaginationDto, @Body() searchDto: SearchDto): Promise<ProductsResponseDto> {
-    this.logger.log(`>>> findFormulas: companyId=${companyId}, paginationDto=${JSON.stringify(paginationDto)}, searchDto=${JSON.stringify(searchDto)}`);
+  findFormulas(@Param('companyId', ParseUUIDPipe) companyId: string, @Query() paginationDto: SearchPaginationDto, @Body() inputDto: SearchInputDto): Promise<ProductsResponseDto> {
+    this.logger.log(`>>> findFormulas: companyId=${companyId}, paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
     const start = performance.now();
 
-    return this.formulaService.findFormulas(companyId, paginationDto, searchDto)
+    return this.formulaService.findFormulas(companyId, paginationDto, inputDto)
     .then( (dtoList: FormulaDto[]) => {
       const response = new ProductsResponseDto(HttpStatus.OK, 'executed', dtoList.length, dtoList);
       const end = performance.now();

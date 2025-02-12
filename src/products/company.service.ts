@@ -1,17 +1,14 @@
 import { In, Like, Repository } from 'typeorm';
 import { isUUID } from 'class-validator';
+import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { SearchDto } from 'src/common/dto/search.dto';
-
 import { CompanyDto } from './dto/company.dto';
 import { Company } from './entities/company.entity';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
-import { ProcessResultDto } from 'src/common/dto/process-result.dto';
 
 @Injectable()
 export class CompanyService {
@@ -30,29 +27,29 @@ export class CompanyService {
     this.dbDefaultLimit = this.ConfigService.get("dbDefaultLimit");
   }
   
-  async updateCompanyBatch(dtoList: CompanyDto[]): Promise<ProcessResultDto>{
+  async updateCompanyBatch(dtoList: CompanyDto[]): Promise<ProcessSummaryDto>{
     this.logger.warn(`updateCompanyBatch: starting process... listSize=${dtoList.length}`);
     const start = performance.now();
     
-    let processResultDto: ProcessResultDto = new ProcessResultDto(dtoList.length);
+    let processSummaryDto: ProcessSummaryDto = new ProcessSummaryDto(dtoList.length);
     let i = 0;
     for (const dto of dtoList) {
       
       await this.updateCompany(dto)
       .then( () => {
-        processResultDto.rowsOK++;
-        processResultDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
+        processSummaryDto.rowsOK++;
+        processSummaryDto.detailsRowsOK.push(`(${i++}) name=${dto.name}, message=OK`);
       })
       .catch(error => {
-        processResultDto.rowsKO++;
-        processResultDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
+        processSummaryDto.rowsKO++;
+        processSummaryDto.detailsRowsKO.push(`(${i++}) name=${dto.name}, error=${error}`);
       })
 
     }
     
     const end = performance.now();
     this.logger.log(`updateCompanyBatch: executed, runtime=${(end - start) / 1000} seconds`);
-    return processResultDto;
+    return processSummaryDto;
   }
 
   updateCompany(dto: CompanyDto): Promise<CompanyDto> {
@@ -62,9 +59,9 @@ export class CompanyService {
     this.logger.warn(`updateCompany: starting process... dto=${JSON.stringify(dto)}`);
     const start = performance.now();
 
-    const searchDto: SearchDto = new SearchDto(dto.id);
+    const inputDto: SearchInputDto = new SearchInputDto(dto.id);
     
-    return this.findCompaniesByParams({}, searchDto)
+    return this.findCompaniesByParams({}, inputDto)
     .then( (entityList: Company[]) => {
 
       // * validate
@@ -106,9 +103,9 @@ export class CompanyService {
     const start = performance.now();
 
     // * find company
-    const searchDto: SearchDto = new SearchDto(undefined, [dto.name]);
+    const inputDto: SearchInputDto = new SearchInputDto(undefined, [dto.name]);
     
-    return this.findCompaniesByParams({}, searchDto)
+    return this.findCompaniesByParams({}, inputDto)
     .then( (entityList: Company[]) => {
 
       // * validate
@@ -144,10 +141,10 @@ export class CompanyService {
 
   }
 
-  findCompanies(paginationDto: PaginationDto, searchDto: SearchDto): Promise<CompanyDto[]> {
+  findCompanies(paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<CompanyDto[]> {
     const start = performance.now();
 
-    return this.findCompaniesByParams(paginationDto, searchDto)
+    return this.findCompaniesByParams(paginationDto, inputDto)
     .then( (entityList: Company[]) => entityList.map( (entity: Company) => new CompanyDto(entity.name, entity.id) ) ) // * map entities to DTOs
     .then( (dtoList: CompanyDto[]) => {
 
@@ -176,9 +173,9 @@ export class CompanyService {
   findOneCompanyByValue(value: string): Promise<CompanyDto[]> {
     const start = performance.now();
 
-    const searchDto: SearchDto = new SearchDto(value);
+    const inputDto: SearchInputDto = new SearchInputDto(value);
     
-    return this.findCompaniesByParams({}, searchDto)
+    return this.findCompaniesByParams({}, inputDto)
     .then( (entityList: Company[]) => entityList.map( (entity: Company) => new CompanyDto(entity.name, entity.id) ) ) // * map entities to DTOs
     .then( (dtoList: CompanyDto[]) => {
 
@@ -208,9 +205,9 @@ export class CompanyService {
     this.logger.log(`removeCompany: starting process... id=${id}`);
     const start = performance.now();
 
-    const searchDto: SearchDto = new SearchDto(id);
+    const inputDto: SearchInputDto = new SearchInputDto(id);
     
-    return this.findCompaniesByParams({}, searchDto)
+    return this.findCompaniesByParams({}, inputDto)
     .then( (entityList: Company[]) => {
       
       if(entityList.length == 0){
@@ -247,14 +244,14 @@ export class CompanyService {
 
   }
 
-  findCompaniesByParams(paginationDto: PaginationDto, searchDto: SearchDto): Promise<Company[]> {
+  findCompaniesByParams(paginationDto: SearchPaginationDto, inputDto: SearchInputDto): Promise<Company[]> {
     const {page=1, limit=this.dbDefaultLimit} = paginationDto;
 
     // * search by partial name
-    if(searchDto.search) {
-      const whereByName = { name: Like(`%${searchDto.search}%`), active: true };
-      const whereById   =  { id: searchDto.search, active: true };
-      const where = isUUID(searchDto.search) ? whereById : whereByName;
+    if(inputDto.search) {
+      const whereByName = { name: Like(`%${inputDto.search}%`), active: true };
+      const whereById   =  { id: inputDto.search, active: true };
+      const where = isUUID(inputDto.search) ? whereById : whereByName;
 
       return this.companyRepository.find({
         take: limit,
@@ -264,12 +261,12 @@ export class CompanyService {
     }
 
     // * search by names
-    if(searchDto.searchList) {
+    if(inputDto.searchList) {
       return this.companyRepository.find({
         take: limit,
         skip: (page - 1) * limit,
         where: {
-          name: In(searchDto.searchList),
+          name: In(inputDto.searchList),
           active: true,
         },
       })

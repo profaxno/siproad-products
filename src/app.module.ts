@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ProductsModule } from './products/products.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 
 import { config } from './config/app.config';
-import { CommonModule } from './common/common.module';
+
+import { ProductsModule } from './products/products.module';
 
 // TODO: HACER EL README
 @Module({
@@ -23,8 +23,8 @@ import { CommonModule } from './common/common.module';
       synchronize: false, // ! Para produccion esta parametro debe estar en false
       autoLoadEntities: true
     }),
-    ProductsModule,
-    CommonModule],
+    ProductsModule
+  ],
   controllers: [],
   providers: [],
 })

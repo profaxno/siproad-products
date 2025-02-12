@@ -1,13 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException } from '@nestjs/common';
+import { ProcessSummaryDto, SearchInputDto, SearchPaginationDto } from 'profaxnojs/util';
 
-import { PaginationDto } from 'src/common/dto/pagination.dto'; 
-import { SearchDto } from 'src/common/dto/search.dto';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Logger, HttpCode, HttpStatus, Query, ParseUUIDPipe, ParseArrayPipe, NotFoundException } from '@nestjs/common';
 
 import { CompanyDto } from './dto/company.dto';
 import { ProductsResponseDto } from './dto/products-response-dto';
 import { CompanyService } from './company.service';
 import { AlreadyExistException, IsBeingUsedException } from './exceptions/products.exception';
-import { ProcessResultDto } from 'src/common/dto/process-result.dto';
+
 
 @Controller('siproad-products')
 export class CompanyController {
@@ -50,8 +49,8 @@ export class CompanyController {
     const start = performance.now();
 
     return this.companyService.updateCompanyBatch(dtoList)
-    .then( (processResultDto: ProcessResultDto) => {
-      const response = new ProductsResponseDto(HttpStatus.OK, "executed", undefined, processResultDto);
+    .then( (processSummaryDto: ProcessSummaryDto) => {
+      const response = new ProductsResponseDto(HttpStatus.OK, "executed", undefined, processSummaryDto);
       const end = performance.now();
       this.logger.log(`<<< updateCompanyBatch: executed, runtime=${(end - start) / 1000} seconds, response=${JSON.stringify(response)}`);
       return response;
@@ -65,11 +64,11 @@ export class CompanyController {
   
 
   @Get('/companies')
-  findCompanies(@Query() paginationDto: PaginationDto, @Body() searchDto: SearchDto): Promise<ProductsResponseDto> {
-    this.logger.log(`>>> findCompanies: paginationDto=${JSON.stringify(paginationDto)}, searchDto=${JSON.stringify(searchDto)}`);
+  findCompanies(@Query() paginationDto: SearchPaginationDto, @Body() inputDto: SearchInputDto): Promise<ProductsResponseDto> {
+    this.logger.log(`>>> findCompanies: paginationDto=${JSON.stringify(paginationDto)}, inputDto=${JSON.stringify(inputDto)}`);
     const start = performance.now();
     
-    return this.companyService.findCompanies(paginationDto, searchDto)
+    return this.companyService.findCompanies(paginationDto, inputDto)
      .then( (dtoList: CompanyDto[]) => {
       const response = new ProductsResponseDto(HttpStatus.OK, "executed", dtoList.length, dtoList);
       const end = performance.now();
